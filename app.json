@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "FootGo",
+    "slug": "footgo",
+    "scheme": "footgo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}
