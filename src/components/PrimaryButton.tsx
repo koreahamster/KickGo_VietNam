@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from "react-native";
+﻿import { Pressable, StyleSheet, Text } from "react-native";
 
 import { COLORS } from "@/constants/colors";
 import { SPACING } from "@/constants/spacing";
@@ -9,18 +9,21 @@ type PrimaryButtonProps = {
   label: string;
   onPress: () => void;
   variant?: ButtonVariant;
+  isDisabled?: boolean;
 };
 
 export function PrimaryButton(props: PrimaryButtonProps): JSX.Element {
-  const { label, onPress, variant = "primary" } = props;
+  const { label, onPress, variant = "primary", isDisabled = false } = props;
 
   return (
     <Pressable
+      disabled={isDisabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         variantStyles[variant],
-        pressed && styles.pressed,
+        pressed && !isDisabled && styles.pressed,
+        isDisabled && styles.disabled,
       ]}
     >
       <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
@@ -43,6 +46,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.88,
+  },
+  disabled: {
+    opacity: 0.55,
   },
 });
 

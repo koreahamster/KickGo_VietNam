@@ -1357,3 +1357,181 @@ Suggested table: user_admin_roles
 Possible roles: super_admin ops_admin support_admin shop_admin
 
 All administrative actions must be recorded in audit_logs.
+
+# --- Documentation Upgrade Additions (v1.4) ---
+
+## Common Profile, Multi-Role, Facility, Region, and Wallet Revision
+
+### Revised `profiles`
+
+`profiles` stores only common user information:
+- id (PK, FK to auth.users.id)
+- display_name (not null)
+- birth_year (null)
+- avatar_url (null)
+- bio (null)
+- phone (null)
+- is_phone_verified (not null, default false)
+- country_code (not null)
+- province_code (not null)
+- district_code (not null)
+- preferred_language (not null)
+- created_at (not null)
+- updated_at (not null)
+
+Player-only fields are removed from `profiles`.
+
+### New `account_types`
+
+Columns:
+- user_id (FK to profiles.id, not null)
+- type (not null)
+- created_at (not null)
+
+Constraints:
+- unique(user_id, type)
+- allowed type values:
+  - player
+  - referee
+  - facility_manager
+
+Relationship:
+- profiles 1 : N account_types
+
+### New `player_profiles`
+
+Columns:
+- user_id (PK, FK to profiles.id)
+- preferred_position (not null)
+- preferred_foot (null)
+- dominant_foot (not null)
+- top_size (null)
+- shoe_size (null)
+- skill_tier (not null)
+- reputation_score (not null)
+- created_at (not null)
+- updated_at (not null)
+
+Constraint:
+- user must have account_types.type = player
+
+Notes:
+- `skill_tier` and `reputation_score` are system-managed fields.
+- They are not direct user input fields.
+
+### New `referee_profiles`
+
+Columns:
+- user_id (PK, FK to profiles.id)
+- created_at (not null)
+- updated_at (not null)
+
+Constraint:
+- user must have account_types.type = referee
+
+### New `facilities`
+
+Columns:
+- id (PK)
+- name (not null)
+- country_code (not null)
+- province_code (not null)
+- district_code (not null)
+- created_at (not null)
+- updated_at (not null)
+
+### New `facility_managers`
+
+Columns:
+- user_id (FK to profiles.id, not null)
+- facility_id (FK to facilities.id, not null)
+- created_at (not null)
+- updated_at (not null)
+
+Constraints:
+- unique(user_id, facility_id)
+- user must have account_types.type = facility_manager
+
+Relationship:
+- profiles 1 : N facility_managers
+- facilities 1 : N facility_managers
+
+### New `wallet_accounts`
+
+Columns:
+- user_id (PK, FK to profiles.id)
+- balance (not null)
+- created_at (not null)
+- updated_at (not null)
+
+Note:
+- `balance` is the current display value only.
+- Ledger truth is maintained by `wallet_transactions`.
+
+### New `wallet_transactions`
+
+Columns:
+- id (PK)
+- user_id (FK to profiles.id, not null)
+- type (not null)
+- amount (not null)
+- status (not null)
+- provider (null)
+- provider_tx_id (null)
+- created_at (not null)
+
+Recommended type values:
+- deposit
+- match_fee
+- refund
+- facility_payment
+
+Recommended status values:
+- pending
+- confirmed
+- failed
+
+### New `payment_intents`
+
+Columns:
+- id (PK)
+- user_id (FK to profiles.id, not null)
+- amount (not null)
+- currency (not null)
+- status (not null)
+- created_at (not null)
+
+Recommended status values:
+- created
+- pending
+- paid
+- expired
+- failed
+
+### New `payment_items`
+
+Columns:
+- id (PK)
+- payment_intent_id (FK to payment_intents.id, not null)
+- item_type (not null)
+- item_id (not null)
+- amount (not null)
+
+Recommended item_type values:
+- match_fee
+- facility_booking
+- league_fee
+
+### Region Revision
+
+Deprecated field:
+- primary_region_code
+
+Replacement fields:
+- country_code
+- province_code
+- district_code
+
+MVP note:
+- region values should be selected from internal static data or seed data.
+- a dedicated regions master table may be added in a later phase.

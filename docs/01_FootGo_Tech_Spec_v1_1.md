@@ -653,3 +653,206 @@ Suggested table: user_admin_roles
 Possible roles: super_admin ops_admin support_admin shop_admin
 
 All administrative actions must be recorded in audit_logs.
+
+# --- Documentation Upgrade Additions (v1.3) ---
+
+## Temporary Authentication Validation Strategy
+
+To unblock mobile authentication validation without requiring Apple Developer enrollment during the current phase, the project may temporarily support Supabase email/password authentication as a development fallback.
+
+Rules:
+- Google OAuth remains the primary social login flow.
+- Email/password authentication is allowed only to validate login success, session persistence, and return-to-home behavior during development.
+- Phone verification remains a future required step and is not replaced by email login.
+- This temporary fallback does not change the database schema in the current phase.
+
+# --- Documentation Upgrade Additions (v1.4) ---
+
+## Common Profile, Multi-Role, Settings, Wallet, and Routing Revision
+
+This revision replaces the player-centered profile model with a common user profile model plus multi-role and role-specific detail structures.
+
+### Common Profile Structure
+
+`profiles` stores only common user information:
+- id
+- display_name
+- birth_year
+- avatar_url
+- bio
+- phone
+- is_phone_verified
+- country_code
+- province_code
+- district_code
+- preferred_language
+- created_at
+- updated_at
+
+### Multi-Role Structure
+
+`account_types` is introduced to support multiple service roles per user.
+
+Allowed values:
+- player
+- referee
+- facility_manager
+
+Rules:
+- One user may have multiple roles.
+- Service account roles are different from team roles.
+- Service account roles are different from match-scoped referee authority.
+
+### Role-Specific Profiles
+
+`player_profiles`
+- Stores player-only data.
+- `skill_tier` and `reputation_score` are system-managed fields.
+- They are not user input fields.
+- They must not be accepted from client request bodies.
+
+`referee_profiles`
+- MVP starts with a minimal structure.
+- Future certification and level fields may be added later.
+
+### Facility Manager Model
+
+Facility manager is modeled as a relationship to facilities rather than as a standalone profile extension.
+
+Recommended structures:
+- facilities
+- facility_managers
+
+MVP rule:
+- public create-facility is not included.
+- facilities are created only through admin/operator workflow or seed data.
+
+### Region Model
+
+`primary_region_code` is replaced by:
+- country_code
+- province_code
+- district_code
+
+Rules:
+- free-text region input is not allowed.
+- region selection must use cascading select.
+- order: country -> province -> district.
+- MVP should use internal static data or seed data first.
+- Settings region change uses the same structure.
+
+### Preferred Language Policy
+
+Supported languages:
+- vi
+- ko
+- en
+
+Priority:
+1. `profiles.preferred_language`
+2. detected device language
+3. default `vi`
+
+Rules:
+- On first onboarding, detect device language if possible.
+- If detection fails, use `vi`.
+- After profile creation, server-stored `preferred_language` takes precedence.
+- Settings may update the preferred language later.
+
+### Onboarding Flow Revision
+
+Revised onboarding flow:
+- login
+- phone verification
+- create-profile (common profile + initial_account_type + preferred_language)
+- role-specific onboarding
+- home
+
+Rules:
+- `create-profile` registers the first role.
+- Additional roles are added through `add-account-type`.
+
+### Referee Concept Split
+
+The word `referee` has two different meanings and must remain separated.
+
+Global account type:
+- `account_types.type = referee`
+
+Match-scoped authority:
+- `matches.referee_user_id`
+
+Recommended rule:
+- assigning a user as a match referee should require `referee_profiles` to exist.
+- actual match result authority remains based on `matches.referee_user_id`.
+
+### Wallet and Payment Principle
+
+`wallet_accounts.balance`
+- current display value only
+- not the ledger of record
+
+`wallet_transactions`
+- source of truth for wallet movement
+- consistency maintained by server transaction logic
+
+`payment_intents.status` allowed values:
+- created
+- pending
+- paid
+- expired
+- failed
+
+Allowed transitions:
+- created -> pending
+- pending -> paid
+- pending -> failed
+- created -> expired
+- pending -> expired
+
+Rules:
+- client cannot finalize payment.
+- payment confirmation must happen through webhook or server verification flow.
+- wallet transactions are recorded only after server-side confirmation.
+
+### Settings Menu Structure
+
+After login, the app provides a common Settings area.
+
+Settings structure:
+- Profile
+- Language
+- Region
+- Account Roles
+- Notifications
+- Wallet
+- App
+
+Phase 2 MVP active settings:
+- Profile
+- Language
+- Region
+- Account Roles
+- App
+
+Deferred settings:
+- Notifications
+- Wallet details
+- payment methods
+- payment notification refinement
+
+### App Routing Direction
+
+Recommended Expo Router structure:
+- (auth)
+- (onboarding)
+- (tabs)
+- (settings)
+- (facility)
+- (admin)
+
+MVP required route groups:
+- (auth)
+- (onboarding)
+- (tabs) with home/profile
+- (settings) with settings/language/region/roles

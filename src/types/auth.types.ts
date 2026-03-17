@@ -1,5 +1,6 @@
-export type AuthProvider = "google";
+﻿export type AuthProvider = "google" | "email";
 
 export const AUTH_PROVIDER_LABEL: Record<AuthProvider, string> = {
-  google: "Social Login",
+  google: "Google",
+  email: "Email",
 };

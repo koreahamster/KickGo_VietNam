@@ -513,3 +513,77 @@ Suggested table: user_admin_roles
 Possible roles: super_admin ops_admin support_admin shop_admin
 
 All administrative actions must be recorded in audit_logs.
+
+# --- Documentation Upgrade Additions (v1.4) ---
+
+## Common Profile, Multi-Role, Facility, Wallet, and Payment Security Revision
+
+### `profiles`
+
+Rules:
+- users may create and update only their own profile
+- public read scope remains subject to product policy
+- region and preferred_language fields follow the same ownership rule
+
+### `account_types`
+
+Rules:
+- users may add only their own roles
+- duplicate roles are not allowed
+- only allowed type values may be inserted
+
+### `player_profiles`
+
+Rules:
+- users may create and update only their own player profile
+- player profile creation requires account_types.type = player
+- `skill_tier` and `reputation_score` are system-managed and must not be directly writable by the client
+
+### `referee_profiles`
+
+Rules:
+- users may create and update only their own referee profile
+- referee profile creation requires account_types.type = referee
+
+### `facilities`
+
+MVP rules:
+- general users cannot insert facilities
+- facility creation is limited to admin/operator workflow or seed data
+
+### `facility_managers`
+
+Rules:
+- general users cannot arbitrarily connect themselves to facilities
+- connection must be managed through an approved server workflow
+- facility manager relation requires account_types.type = facility_manager
+
+### `wallet_accounts`
+
+Rules:
+- client must not directly update balance
+- balance is treated as the current display value only
+- server transaction flow is the source of truth
+
+### `wallet_transactions`
+
+Rules:
+- transaction rows are created only through server-side verified flows
+- direct client insert/update is not allowed
+
+### `payment_intents` and `payment_items`
+
+Rules:
+- clients may create their own payment intent requests if product policy allows
+- state transitions must be controlled by server verification logic
+- client-side payment success callback is never sufficient to mark a payment as paid
+
+### Referee concept split
+
+Security distinction:
+- global user role: account_types.type = referee
+- match-scoped authority: matches.referee_user_id
+
+Recommended enforcement:
+- server functions should validate that a designated match referee has `referee_profiles`
+- final write authority for match result submission remains tied to `matches.referee_user_id`

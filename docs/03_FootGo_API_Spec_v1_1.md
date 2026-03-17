@@ -624,3 +624,173 @@ Suggested table: user_admin_roles
 Possible roles: super_admin ops_admin support_admin shop_admin
 
 All administrative actions must be recorded in audit_logs.
+
+# --- Documentation Upgrade Additions (v1.3) ---
+
+## Temporary Email Auth Fallback for Development
+
+During the current authentication validation phase, Supabase Auth may use email/password sign-up and sign-in as a temporary fallback to verify:
+- successful authentication
+- session creation and persistence
+- navigation back to the home screen
+
+Auth methods in this temporary fallback:
+- Google OAuth
+- Email and password
+
+Notes:
+- Email/password fallback is for development verification only.
+- Phone verification remains a separate future requirement.
+- No database schema change is introduced by this fallback.
+
+# --- Documentation Upgrade Additions (v1.4) ---
+
+## Common Profile, Account Type, Region, Language, Facility, Wallet, and Payment API Revision
+
+### `create-profile`
+
+Purpose:
+- create common profile
+- register initial account type
+- store preferred language
+
+POST `/functions/v1/create-profile`
+
+Request example:
+```json
+{
+  "display_name": "Seongho",
+  "birth_year": 1993,
+  "country_code": "VN",
+  "province_code": "HCM",
+  "district_code": "HCM-D7",
+  "preferred_language": "ko",
+  "bio": "Weekly football player",
+  "initial_account_type": "player"
+}
+```
+
+Response example:
+```json
+{
+  "success": true,
+  "data": {
+    "profile_id": "uuid",
+    "account_type": "player",
+    "requires_role_onboarding": true
+  },
+  "error": null
+}
+```
+
+### `add-account-type`
+
+Purpose:
+- register additional service roles after initial onboarding
+
+POST `/functions/v1/add-account-type`
+
+Request example:
+```json
+{
+  "type": "referee"
+}
+```
+
+### `create-player-profile`
+
+POST `/functions/v1/create-player-profile`
+
+Request example:
+```json
+{
+  "preferred_position": "CM",
+  "preferred_foot": "both",
+  "dominant_foot": "right",
+  "top_size": "L",
+  "shoe_size": "270"
+}
+```
+
+Rules:
+- `skill_tier` and `reputation_score` must not be accepted from the client.
+- those fields are initialized and updated by server policy only.
+
+### `update-player-profile`
+
+Rules:
+- editable fields may include position, foot, shirt size, and shoe size.
+- `skill_tier` and `reputation_score` are not editable request fields.
+
+### `create-referee-profile`
+
+POST `/functions/v1/create-referee-profile`
+
+Request example:
+```json
+{}
+```
+
+### Facility manager related API
+
+MVP rule:
+- public `create-facility` is not provided.
+- facilities are created only through admin/operator workflow or seed data.
+
+MVP minimum API:
+- `assign-facility-manager`
+
+POST `/functions/v1/assign-facility-manager`
+
+Request example:
+```json
+{
+  "facility_id": "uuid"
+}
+```
+
+### Region input rule
+
+Rules:
+- no free-text region input
+- use code values only
+- selection order: country -> province -> district
+- MVP data source should be internal static data or seed data first
+
+### Preferred language rule
+
+Supported values:
+- vi
+- ko
+- en
+
+Priority rule:
+1. stored `profiles.preferred_language`
+2. detected device language
+3. default `vi`
+
+### Wallet and payment APIs (structure first, implementation later)
+
+Recommended APIs:
+- `create-payment-intent`
+- `confirm-wallet-deposit`
+- `list-wallet-transactions`
+
+Payment intent statuses:
+- created
+- pending
+- paid
+- expired
+- failed
+
+Allowed transitions:
+- created -> pending
+- pending -> paid
+- pending -> failed
+- created -> expired
+- pending -> expired
+
+Rules:
+- payment cannot be finalized by the client.
+- final payment confirmation must happen through webhook or server verification.
+- wallet transactions are recorded only after server-side confirmation.

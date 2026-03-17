@@ -523,3 +523,62 @@ Suggested table: user_admin_roles
 Possible roles: super_admin ops_admin support_admin shop_admin
 
 All administrative actions must be recorded in audit_logs.
+
+# --- Documentation Upgrade Additions (v1.3) ---
+
+## Phase 2 Temporary Validation Note
+
+If native Google OAuth callback verification is blocked by platform constraints during development, email/password authentication may be implemented as a temporary fallback within Phase 2 to validate:
+- login success
+- session persistence
+- navigation return to the home screen
+
+This fallback does not remove the planned phone verification requirement in later authentication work.
+
+# --- Documentation Upgrade Additions (v1.4) ---
+
+## Phase 2 Onboarding Revision
+
+Revised Phase 2 flow:
+- login
+- phone verification
+- create-profile
+- initial account type selection
+- preferred language save
+- role-specific onboarding
+- home entry
+
+### Phase 2 MVP includes
+- player onboarding
+- referee onboarding
+- facility_manager minimum relationship structure
+- settings structure for:
+  - Profile
+  - Language
+  - Region
+  - Account Roles
+  - App
+
+### Deferred to later phases
+- public create-facility feature
+- facility operation workflows
+- dedicated regions master table
+- wallet/payment live implementation
+- payment notification refinement
+- advanced referee profile fields
+
+## Suggested App Route Groups
+
+Recommended Expo Router structure:
+- (auth)
+- (onboarding)
+- (tabs)
+- (settings)
+- (facility)
+- (admin)
+
+MVP required groups:
+- (auth)
+- (onboarding)
+- (tabs): home, profile
+- (settings): settings, language, region, roles

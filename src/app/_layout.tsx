@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+﻿import { Stack } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout(): JSX.Element {
@@ -12,18 +12,10 @@ export default function RootLayout(): JSX.Element {
           },
         }}
       >
-        <Stack.Screen
-          name="index"
-          options={{
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="login"
-          options={{
-            title: "Login",
-          }}
-        />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+        <Stack.Screen name="(settings)" options={{ headerShown: false }} />
       </Stack>
     </SafeAreaProvider>
   );

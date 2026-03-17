@@ -6,8 +6,29 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.footgo.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.footgo.app"
+    },
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "50204e28-e3a3-41aa-8b97-8fbff394a202"
+      }
+    }
   }
 }
