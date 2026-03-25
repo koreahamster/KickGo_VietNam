@@ -1,4 +1,4 @@
-﻿import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2";
 
 function getEnv(name: string): string {
   const value = Deno.env.get(name);
@@ -10,6 +10,10 @@ function getEnv(name: string): string {
   return value;
 }
 
+export function getSupabaseUrl(): string {
+  return getEnv("SUPABASE_URL");
+}
+
 export function createUserClient(request: Request): SupabaseClient {
   const authorization = request.headers.get("Authorization");
 
@@ -17,12 +21,21 @@ export function createUserClient(request: Request): SupabaseClient {
     throw new Error("Authorization header is missing.");
   }
 
-  return createClient(getEnv("SUPABASE_URL"), getEnv("SUPABASE_ANON_KEY"), {
+  return createClient(getSupabaseUrl(), getEnv("SUPABASE_ANON_KEY"), {
     global: {
       headers: {
         Authorization: authorization,
       },
     },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+export function createServiceRoleClient(): SupabaseClient {
+  return createClient(getSupabaseUrl(), getEnv("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -41,7 +54,7 @@ export async function requireUser(client: SupabaseClient): Promise<User> {
   }
 
   if (!user) {
-    throw new Error("인증된 사용자가 필요합니다.");
+    throw new Error("Authenticated user is required.");
   }
 
   return user;

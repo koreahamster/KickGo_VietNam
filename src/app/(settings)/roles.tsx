@@ -1,12 +1,13 @@
-﻿import { router } from "expo-router";
-import { useEffect } from "react";
+import { router } from "expo-router";
+import { useEffect, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { ACCOUNT_TYPE_OPTIONS, getOptionLabel } from "@/constants/profile-options";
+import { getAccountTypeOptions, getOptionLabel } from "@/constants/profile-options";
 import { COLORS } from "@/constants/colors";
 import { SPACING } from "@/constants/spacing";
+import { useI18n } from "@/core/i18n/LanguageProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import type { AccountType } from "@/types/profile.types";
@@ -14,6 +15,7 @@ import type { AccountType } from "@/types/profile.types";
 const ROLE_ORDER: AccountType[] = ["player", "referee", "facility_manager"];
 
 export default function RolesScreen(): JSX.Element {
+  const { language, t } = useI18n();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const {
     accountTypes,
@@ -21,9 +23,11 @@ export default function RolesScreen(): JSX.Element {
     hasProfile,
     isProfileLoading,
     isSubmittingProfile,
+    nextOnboardingRoute,
     profileErrorMessage,
     profileStatusMessage,
   } = useProfile({ enabled: isAuthenticated });
+  const roleOptions = useMemo(() => getAccountTypeOptions(language), [language]);
   const missingRoles = ROLE_ORDER.filter((role) => !accountTypes.includes(role));
 
   useEffect(() => {
@@ -32,14 +36,9 @@ export default function RolesScreen(): JSX.Element {
     }
 
     if (!isAuthenticated) {
-      router.replace("/(auth)/login");
-      return;
+      router.replace("/");
     }
-
-    if (!isProfileLoading && !hasProfile) {
-      router.replace("/(auth)/phone-verify");
-    }
-  }, [hasProfile, isAuthenticated, isAuthLoading, isProfileLoading]);
+  }, [isAuthenticated, isAuthLoading]);
 
   const handleAddRole = async (role: AccountType): Promise<void> => {
     try {
@@ -49,7 +48,7 @@ export default function RolesScreen(): JSX.Element {
         router.push("/(onboarding)/role-onboarding");
       }
     } catch {
-      // Error state is already handled in useProfile.
+      // handled in hook
     }
   };
 
@@ -57,8 +56,23 @@ export default function RolesScreen(): JSX.Element {
     return (
       <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={styles.title}>계정 역할</Text>
-          <Text style={styles.subtitle}>현재 역할 정보를 불러오고 있습니다.</Text>
+          <Text style={styles.title}>{t("settings.roles.title")}</Text>
+          <Text style={styles.subtitle}>{t("settings.roles.loadingSubtitle")}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.title}>{t("settings.roles.title")}</Text>
+          <Text style={styles.subtitle}>{t("settings.roles.needProfileSubtitle")}</Text>
+          <View style={styles.card}>
+            <PrimaryButton label={t("settings.roles.continueOnboarding")} onPress={() => router.replace(nextOnboardingRoute)} />
+            <PrimaryButton label={t("settings.roles.backToSettings")} variant="outline" onPress={() => router.replace("/(settings)/settings")} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -67,18 +81,18 @@ export default function RolesScreen(): JSX.Element {
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>계정 역할</Text>
-        <Text style={styles.subtitle}>현재 계정에 필요한 역할을 추가할 수 있습니다.</Text>
+        <Text style={styles.title}>{t("settings.roles.title")}</Text>
+        <Text style={styles.subtitle}>{t("settings.roles.subtitle")}</Text>
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>보유 역할</Text>
+          <Text style={styles.sectionTitle}>{t("settings.roles.currentRoles")}</Text>
           {accountTypes.length > 0 ? (
             accountTypes.map((role) => (
               <Text key={role} style={styles.value}>
-                {getOptionLabel(ACCOUNT_TYPE_OPTIONS, role)}
+                {getOptionLabel(roleOptions, role)}
               </Text>
             ))
           ) : (
-            <Text style={styles.value}>아직 역할이 없습니다.</Text>
+            <Text style={styles.value}>{t("settings.roles.noRoles")}</Text>
           )}
         </View>
         {missingRoles.length > 0 ? (
@@ -86,17 +100,15 @@ export default function RolesScreen(): JSX.Element {
             {missingRoles.map((role) => (
               <PrimaryButton
                 key={role}
-                label={`${getOptionLabel(ACCOUNT_TYPE_OPTIONS, role)} 추가`}
-                onPress={() => {
-                  void handleAddRole(role);
-                }}
+                label={`${getOptionLabel(roleOptions, role)} ${t("settings.roles.addSuffix")}`}
+                onPress={() => void handleAddRole(role)}
                 variant="secondary"
                 isDisabled={isSubmittingProfile}
               />
             ))}
           </View>
         ) : (
-          <Text style={styles.helperText}>현재 지원되는 역할이 모두 추가된 상태입니다.</Text>
+          <Text style={styles.helperText}>{t("settings.roles.allAdded")}</Text>
         )}
         {profileErrorMessage ? <Text style={styles.errorText}>{profileErrorMessage}</Text> : null}
         {profileStatusMessage ? <Text style={styles.statusText}>{profileStatusMessage}</Text> : null}

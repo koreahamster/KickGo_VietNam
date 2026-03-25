@@ -48,3 +48,27 @@ verify_jwt = false
 
 [functions.update-profile]
 verify_jwt = false
+
+[functions.update-profile-visibility]
+verify_jwt = false
+
+[functions.upload-avatar]
+verify_jwt = false
+
+[functions.record-consent]
+verify_jwt = false
+
+[functions.create-team]
+verify_jwt = false
+
+[functions.create-team-invite]
+verify_jwt = false
+
+[functions.join-team]
+verify_jwt = false
+
+[functions.create-match]
+verify_jwt = false
+
+[functions.upload-team-asset]
+verify_jwt = false

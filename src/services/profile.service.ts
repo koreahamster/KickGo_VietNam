@@ -3,6 +3,7 @@ import type {
   AccountType,
   AddAccountTypeResult,
   ApiResponse,
+  AvatarUploadBinary,
   CommonProfileRecord,
   CreateCommonProfileInput,
   CreatePlayerProfileInput,
@@ -10,10 +11,16 @@ import type {
   PlayerProfileRecord,
   ProfileBundle,
   RefereeProfileRecord,
+  RequestAvatarUploadInput,
+  RequestAvatarUploadResult,
   RoleProfileResult,
+  SupportedAvatarContentType,
+  SupportedVisibility,
   UpdateCommonProfileInput,
   UpdatePlayerProfileInput,
   UpdateProfileResult,
+  UpdateProfileVisibilityResult,
+  UploadAvatarInput,
 } from "@/types/profile.types";
 
 type FunctionErrorContext = {
@@ -130,7 +137,7 @@ async function readFunctionErrorMessage(error: unknown): Promise<string> {
           return typeof context.status === "number" ? `${statusLabel} - ${message}` : message;
         }
       } catch {
-        // Fall through to text parsing.
+        // fall through to text parsing
       }
     }
 
@@ -144,7 +151,7 @@ async function readFunctionErrorMessage(error: unknown): Promise<string> {
           return `${statusLabel} - ${text}`;
         }
       } catch {
-        // Fall through to status-only fallback.
+        // fall through to status-only fallback
       }
     }
 
@@ -160,7 +167,7 @@ async function readFunctionErrorMessage(error: unknown): Promise<string> {
 
 async function invokeFunction<TResponse>(
   functionName: string,
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
 ): Promise<TResponse> {
   const headers = await getFunctionAuthHeaders(functionName);
   const { data, error } = await supabase.functions.invoke<TResponse>(functionName, {
@@ -179,6 +186,10 @@ async function invokeFunction<TResponse>(
     throw new Error(message);
   }
 
+  if (data === null) {
+    throw new Error(`Function ${functionName} returned no data.`);
+  }
+
   return data;
 }
 
@@ -194,6 +205,16 @@ function assertSuccess<T>(response: ApiResponse<T>, fallbackMessage: string): T 
   return response.data;
 }
 
+async function readAvatarFile(uri: string): Promise<Blob> {
+  const response = await fetch(uri);
+
+  if (!response.ok) {
+    throw new Error(`Failed to read avatar file with HTTP ${response.status}.`);
+  }
+
+  return response.blob();
+}
+
 export async function getMyProfileBundle(): Promise<ProfileBundle> {
   const userId = await getAuthenticatedUserId();
 
@@ -201,7 +222,7 @@ export async function getMyProfileBundle(): Promise<ProfileBundle> {
     supabase
       .from("profiles")
       .select(
-        "id, display_name, birth_year, avatar_url, bio, phone, is_phone_verified, country_code, province_code, district_code, preferred_language"
+        "id, display_name, birth_year, avatar_url, bio, phone, is_phone_verified, country_code, province_code, district_code, preferred_language, visibility",
       )
       .eq("id", userId)
       .maybeSingle(),
@@ -209,11 +230,15 @@ export async function getMyProfileBundle(): Promise<ProfileBundle> {
     supabase
       .from("player_profiles")
       .select(
-        "user_id, preferred_position, preferred_foot, dominant_foot, top_size, shoe_size, skill_tier, reputation_score"
+        "user_id, preferred_position, preferred_foot, dominant_foot, top_size, shoe_size, skill_tier, reputation_score, left_foot_skill, right_foot_skill, play_styles",
       )
       .eq("user_id", userId)
       .maybeSingle(),
-    supabase.from("referee_profiles").select("user_id").eq("user_id", userId).maybeSingle(),
+    supabase
+      .from("referee_profiles")
+      .select("user_id, average_rating, rating_count")
+      .eq("user_id", userId)
+      .maybeSingle(),
   ]);
 
   if (profileResult.error) {
@@ -255,6 +280,7 @@ export async function createProfile(input: CreateCommonProfileInput): Promise<Cr
     preferred_language: input.preferredLanguage,
     bio: input.bio,
     initial_account_type: input.initialAccountType,
+    visibility: input.visibility ?? "members_only",
   });
 
   return assertSuccess(response, "Failed to create common profile.");
@@ -269,9 +295,62 @@ export async function updateProfile(input: UpdateCommonProfileInput): Promise<Up
     district_code: input.districtCode,
     preferred_language: input.preferredLanguage,
     bio: input.bio,
+    visibility: input.visibility,
   });
 
   return assertSuccess(response, "Failed to update profile.");
+}
+
+export async function updateProfileVisibility(
+  visibility: SupportedVisibility,
+): Promise<UpdateProfileVisibilityResult> {
+  const response = await invokeFunction<ApiResponse<UpdateProfileVisibilityResult>>(
+    "update-profile-visibility",
+    { visibility },
+  );
+
+  return assertSuccess(response, "Failed to update profile visibility.");
+}
+
+export async function requestAvatarUpload(
+  input: RequestAvatarUploadInput,
+): Promise<RequestAvatarUploadResult> {
+  const response = await invokeFunction<ApiResponse<RequestAvatarUploadResult>>("upload-avatar", {
+    file_name: input.fileName,
+    content_type: input.contentType,
+  });
+
+  return assertSuccess(response, "Failed to request avatar upload URL.");
+}
+
+export async function uploadAvatarToSignedUrl(
+  uploadUrl: string,
+  contentType: SupportedAvatarContentType,
+  fileBody: AvatarUploadBinary,
+): Promise<void> {
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": contentType,
+    },
+    body: fileBody as unknown as BodyInit,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Avatar upload failed with HTTP ${response.status}.`);
+  }
+}
+
+export async function uploadAvatar(input: UploadAvatarInput): Promise<RequestAvatarUploadResult> {
+  const uploadRequest = await requestAvatarUpload({
+    fileName: input.fileName,
+    contentType: input.contentType,
+  });
+  const fileBody = await readAvatarFile(input.uri);
+
+  await uploadAvatarToSignedUrl(uploadRequest.upload_url, input.contentType, fileBody);
+
+  return uploadRequest;
 }
 
 export async function addAccountType(type: AccountType): Promise<AddAccountTypeResult> {
@@ -283,7 +362,7 @@ export async function addAccountType(type: AccountType): Promise<AddAccountTypeR
 }
 
 export async function createPlayerProfile(
-  input: CreatePlayerProfileInput
+  input: CreatePlayerProfileInput,
 ): Promise<RoleProfileResult> {
   const response = await invokeFunction<ApiResponse<RoleProfileResult>>("create-player-profile", {
     preferred_position: input.preferredPosition,
@@ -297,7 +376,7 @@ export async function createPlayerProfile(
 }
 
 export async function updatePlayerProfile(
-  input: UpdatePlayerProfileInput
+  input: UpdatePlayerProfileInput,
 ): Promise<RoleProfileResult> {
   const response = await invokeFunction<ApiResponse<RoleProfileResult>>("update-player-profile", {
     preferred_position: input.preferredPosition,
@@ -305,6 +384,9 @@ export async function updatePlayerProfile(
     dominant_foot: input.dominantFoot,
     top_size: input.topSize,
     shoe_size: input.shoeSize,
+    left_foot_skill: input.leftFootSkill,
+    right_foot_skill: input.rightFootSkill,
+    play_styles: input.playStyles,
   });
 
   return assertSuccess(response, "Failed to update player profile.");

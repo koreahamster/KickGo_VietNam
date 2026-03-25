@@ -2,8 +2,12 @@
 import { errorResponse, handleOptionsRequest, parseJsonBody, successResponse } from "../_shared/http.ts";
 import {
   assertFoot,
+  assertFootSkill,
+  assertPlayStyles,
   assertPosition,
+  readOptionalNullableNumber,
   readOptionalString,
+  readOptionalStringArray,
 } from "../_shared/validation.ts";
 
 Deno.serve(async (request: Request): Promise<Response> => {
@@ -27,13 +31,19 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const dominantFoot = readOptionalString(body, "dominant_foot");
     const topSize = readOptionalString(body, "top_size");
     const shoeSize = readOptionalString(body, "shoe_size");
+    const leftFootSkill = readOptionalNullableNumber(body, "left_foot_skill");
+    const rightFootSkill = readOptionalNullableNumber(body, "right_foot_skill");
+    const playStyles = readOptionalStringArray(body, "play_styles");
 
     if (
       preferredPosition === undefined &&
       preferredFoot === undefined &&
       dominantFoot === undefined &&
       topSize === undefined &&
-      shoeSize === undefined
+      shoeSize === undefined &&
+      leftFootSkill === undefined &&
+      rightFootSkill === undefined &&
+      playStyles === undefined
     ) {
       return errorResponse("empty_update", "수정할 값이 없습니다.", 400);
     }
@@ -52,7 +62,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       return errorResponse("player_profile_missing", "선수 프로필이 존재하지 않습니다.", 404);
     }
 
-    const updatePayload: Record<string, string | null> = {};
+    const updatePayload: Record<string, string | string[] | number | null> = {};
 
     if (preferredPosition !== undefined) {
       updatePayload.preferred_position = assertPosition(preferredPosition);
@@ -72,6 +82,26 @@ Deno.serve(async (request: Request): Promise<Response> => {
 
     if (shoeSize !== undefined) {
       updatePayload.shoe_size = shoeSize || null;
+    }
+
+    if (leftFootSkill !== undefined) {
+      if (leftFootSkill === null) {
+        throw new Error("left_foot_skill cannot be null.");
+      }
+
+      updatePayload.left_foot_skill = assertFootSkill(leftFootSkill);
+    }
+
+    if (rightFootSkill !== undefined) {
+      if (rightFootSkill === null) {
+        throw new Error("right_foot_skill cannot be null.");
+      }
+
+      updatePayload.right_foot_skill = assertFootSkill(rightFootSkill);
+    }
+
+    if (playStyles !== undefined) {
+      updatePayload.play_styles = assertPlayStyles(playStyles);
     }
 
     const { error: updateError } = await client

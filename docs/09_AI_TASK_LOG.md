@@ -1,4 +1,4 @@
-ï»¿# AI_TASK_LOG
+# AI_TASK_LOG
 
 Record all AI generated work.
 
@@ -308,3 +308,244 @@ Reason: The role onboarding screen had actual `???` strings saved into the sourc
 - Aligned Edge Function shared region validation with the same province/district codes.
 - Normalized shared validation error messages to stable English output for debugging.
 - Note: MVP still remains Vietnam-only per the current approved docs.
+- Expanded district coverage substantially for major Vietnam cities/provinces such as HCM, Hanoi, Da Nang, Hue, Hai Phong, Can Tho, Binh Duong, Dong Nai, Ba Ria-Vung Tau, Khanh Hoa, Lam Dong, Dak Lak, Quang Ninh, and Mekong provinces.
+- Kept client region options and Edge Function region validation in sync to avoid province/district mismatch errors.
+
+- 2026-03-18 ìž‘ì—…: ë² íŠ¸ë‚¨ ì§€ì—­ ë°ì´í„° ì†ŒìŠ¤ë¥¼ shared/regions/vietnam-regions.ts ê³µìš© seed ëª¨ë“ˆë¡œ í†µí•©. ì•± ì˜µì…˜ê³¼ Edge Function region validationì´ ë™ì¼í•œ province/district ì½”ë“œì…‹ì„ ì°¸ì¡°í•˜ë„ë¡ ì •ë¦¬í•˜ê³ , ì£¼ìš” ë„ì‹œ/ì„± district coverageë¥¼ ì¶”ê°€ í™•ìž¥.
+
+- 2026-03-18 ìž‘ì—…: ì™¸ë¶€ ë² íŠ¸ë‚¨ ì§€ì—­ APIë¥¼ runtimeì— ì§ì ‘ ì—°ê²°í•˜ì§€ ì•Šê³ , provider snapshotì„ ë‚´ë¶€ì— ê°€ì ¸ì˜¤ëŠ” scripts/sync-vietnam-regions.mjs ì¶”ê°€. shared/regions/vietnam-regions.provider.json ìƒì„± ê²½ë¡œì™€ 
+pm run regions:sync ì‹¤í–‰ ìŠ¤í¬ë¦½íŠ¸ ì¶”ê°€.
+- 2026-03-18 ìž‘ì—…: Phase 2 ì˜¨ë³´ë”© ì•ˆì •í™”. `src/lib/onboarding.ts`ë¥¼ ì¶”ê°€í•´ ê³µí†µ í”„ë¡œí•„/ì—­í•  ì˜¨ë³´ë”© ì™„ë£Œ ìƒíƒœë¥¼ í•œ ê³³ì—ì„œ ê³„ì‚°í•˜ë„ë¡ ì •ë¦¬í–ˆê³ , `useProfile`ì´ ê°™ì€ ê¸°ì¤€ìœ¼ë¡œ `pendingRoleOnboarding`, `onboardingStep`, `nextOnboardingRoute`ë¥¼ ì œê³µí•˜ë„ë¡ ìˆ˜ì •í–ˆë‹¤. `phone-verify`, `create-profile`, `settings/*` í™”ë©´ì€ ìžë™ ë¦¬ë””ë ‰ì…˜ ëŒ€ì‹  ë²„íŠ¼ ê¸°ë°˜ ì§„í–‰ íë¦„ìœ¼ë¡œ ë°”ê¿¨ë‹¤.
+- 2026-03-19 ìž‘ì—…: settings ë©”ì¸ í™”ë©´ì„ ScrollView êµ¬ì¡°ë¡œ ìž¬êµ¬ì„±í•´ ëª¨ë°”ì¼ì—ì„œ í•˜ë‹¨ ì¹´ë“œì™€ ë²„íŠ¼ê¹Œì§€ ìŠ¤í¬ë¡¤ ê°€ëŠ¥í•˜ë„ë¡ ìˆ˜ì •.
+Date: 2026-03-20
+AI Tool: Codex
+Task: Align backend and profile client structure with FootGo v2.0 docs
+Files Changed: supabase/migrations/010_create_user_devices.sql, supabase/migrations/011_apply_user_devices_and_avatar_storage_policies.sql, supabase/functions/_shared/auth.ts, supabase/functions/_shared/types.ts, supabase/functions/create-profile/index.ts, supabase/functions/upload-avatar/index.ts, supabase/config.toml, src/types/profile.types.ts, src/services/profile.service.ts, src/hooks/useProfile.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: V2.0 docs added user_devices, avatar upload via Edge Function, avatars Storage bucket/policy requirements, and stricter profile/avatar API structure. The codebase was missing those backend pieces and still had stale/garbled profile state messages.
+Date: 2026-03-21
+AI Tool: Codex
+Task: Re-review KickGo v3.1 docs and align schema/profile/settings implementation with the revised document set
+Files Changed: supabase/migrations/010_create_user_devices.sql, supabase/migrations/011_apply_user_devices_and_avatar_storage_policies.sql, supabase/migrations/012_align_kickgo_v3_1_core_schema.sql, supabase/migrations/013_apply_kickgo_v3_1_additional_policies.sql, supabase/functions/_shared/types.ts, supabase/functions/_shared/validation.ts, supabase/functions/create-profile/index.ts, supabase/functions/update-profile/index.ts, supabase/functions/update-profile-visibility/index.ts, supabase/config.toml, src/types/profile.types.ts, src/services/profile.service.ts, src/hooks/useProfile.ts, src/app/(settings)/_layout.tsx, src/app/(settings)/settings.tsx, src/app/(settings)/visibility.tsx, src/app/(settings)/notifications.tsx, src/app/(settings)/account.tsx, src/app/(tabs)/index.tsx, src/app/(auth)/signup.tsx, src/types/global.d.ts, tsconfig.json, app.json, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The revised KickGo v3.1 docs added profiles.visibility, referee aggregate fields, governance/support tables, visibility settings, user_devices/avatar alignment, and a broader settings structure. The previous implementation still reflected older FootGo/V2 assumptions and had a migration gap around currency_formats and player_team_history.
+[2026-03-23] user_consents ìš°ì„  êµ¬í˜„ ì‹œìž‘.
+- migration 014_add_user_consents_update_policy.sql ì¶”ê°€
+- Edge Function record-consent ì¶”ê°€
+- create-profile í™”ë©´ì— í•„ìˆ˜ privacy / optional marketing consent ì—°ê²°
+- Settings > Account í™”ë©´ì—ì„œ consent ìƒíƒœ ì¡°íšŒ/ë³€ê²½ ì—°ê²°
+- phone OTP ëŠ” í›„ì†ìœ¼ë¡œ ìœ ì§€Date: 2026-03-23
+AI Tool: Codex
+Task: Stabilize Phase 2 language switching, common profile cancel flow, and session timeout behavior
+Files Changed: src/core/i18n/translations.ts, src/components/LanguageSwitcher.tsx, src/app/(onboarding)/create-profile.tsx, src/app/(onboarding)/role-onboarding.tsx, src/app/(settings)/language.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The login-language selection structure already existed partially, but translations were corrupted, onboarding screens were mixing languages, Settings language save did not update the local language provider, and common profile edit mode lacked a cancel action. Session timeout remained enabled globally through SessionTimeoutGate.Date: 2026-03-23
+AI Tool: Codex
+Task: Convert auth language selection to combo box and stabilize broken Vietnamese strings
+Files Changed: src/components/LanguageSwitcher.tsx, src/constants/profile-options.ts, src/core/i18n/translations.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The chip-style language selector was less consistent with the rest of the form UI, and Vietnamese translation text was rendering corrupted on-device. The auth language selector was rebuilt on top of SelectField, and translation text was rewritten using stable ASCII or Unicode-escaped strings.
+## 2026-03-23 - Global i18n propagation and 30-minute auto sign-out
+- Localized auth/onboarding/settings/tab layout titles through the shared LanguageProvider.
+- Added global profile-language sync inside useProfile so stored preferred_language updates the entire app after profile load.
+- Added common translation keys for loading/home and switched the login language selector to the shared combo-box pattern.
+- Reduced SessionTimeoutGate absolute sign-out window from 12 hours to 30 minutes.
+
+## 2026-03-23 - Vietnamese labels and settings language save behavior
+- Rewrote src/constants/profile-options.ts to restore readable Korean labels and accented Vietnamese option labels.
+- Updated src/app/(settings)/language.tsx so saving a new language applies the local app language immediately before returning to the previous screen.
+- Refreshed visible Vietnamese translation copy for auth, home, and settings screens so the main login/settings flows no longer render tone-less placeholders.
+
+- 2026-03-23: iPhone Vietnamese glyph rendering issue ëŒ€ì‘ì„ ìœ„í•´ Times New Roman ê¸°ë°˜ ì „ì—­ í°íŠ¸ ì ìš©. root layout, auth/onboarding/settings/tabs headers, tab labels, PrimaryButton, SelectFieldì— ê³µí†µ typography helper ì—°ê²°.
+
+- 2026-03-23: VI translations block re-written in UTF-8 to recover broken Vietnamese strings from login/onboarding/settings screens after font change.
+
+- 2026-03-23: Removed per-screen preferred_language back-sync from useProfile to stop Settings language changes from being overwritten by stale profile state. Login screen converted to KeyboardAvoidingView + ScrollView so first auth screen can scroll on mobile.
+Date: 2026-03-23
+AI Tool: Codex
+Task: Fix settings language propagation and make the first login screen scrollable
+Files Changed: src/hooks/useProfile.ts, src/app/(auth)/login.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: Settings language changes were being overwritten by stale profile-driven language sync from individual useProfile instances, and the first auth screen did not scroll correctly on mobile when the keyboard was open.
+Date: 2026-03-23
+AI Tool: Codex
+Task: Implement avatar upload UI on the profile tab
+Files Changed: package.json, package-lock.json, src/types/profile.types.ts, src/services/profile.service.ts, src/hooks/useProfile.ts, src/app/(tabs)/profile.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: KickGo v3.1 already had upload-avatar backend support, but users still could not select and upload a profile avatar from the app. Added expo-image-picker, a client upload path, and a profile-tab avatar preview/upload UI.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Hide avatar path text from the profile tab avatar card
+Files Changed: src/app/(tabs)/profile.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The avatar upload UI should not expose the raw stored avatar URL/path beside the preview. The avatar card now keeps the helper text and only shows a fallback message when no avatar exists.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Start Phase 3 team core with teams/team_members schema, create-team Edge Function, and a minimal teams tab flow
+Files Changed: supabase/migrations/015_create_team_core_tables.sql, supabase/migrations/016_apply_team_core_policies.sql, supabase/functions/create-team/index.ts, supabase/config.toml, src/types/team.types.ts, src/constants/team-ui.ts, src/services/team.service.ts, src/hooks/useTeams.ts, src/app/_layout.tsx, src/app/(tabs)/_layout.tsx, src/app/(tabs)/teams.tsx, src/app/(team)/_layout.tsx, src/app/(team)/create.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: Phase 2 profile/settings work was stable enough to start the first Phase 3 slice. Added the minimum team core needed to create a team, store an owner membership, and show the current user's active teams inside the app without opening invites, announcements, or fee management yet.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Fix recursive team_members RLS policy after the first on-device team creation test
+Files Changed: supabase/migrations/017_fix_team_member_policy_recursion.sql, src/app/(tabs)/teams.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The initial team_members SELECT policy referenced public.team_members from inside its own USING clause, causing PostgreSQL to raise "infinite recursion detected in policy for relation team_members" when the Teams tab tried to load the current user's memberships. The fix narrows team_members reads to self rows only for this phase.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Add Phase 3 team invite code generation and invite-based team join flow
+Files Changed: supabase/migrations/018_create_team_invites.sql, supabase/migrations/019_enable_team_invites_rls.sql, supabase/functions/create-team-invite/index.ts, supabase/functions/join-team/index.ts, supabase/config.toml, src/constants/team-ui.ts, src/services/team.service.ts, src/hooks/useTeams.ts, src/app/(team)/_layout.tsx, src/app/(team)/join.tsx, src/app/(tabs)/teams.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: Open the next Phase 3 slice after team creation by adding owner/manager invite code generation, invite-code team joining, and the minimum mobile UI to create codes and join teams without introducing recruitment, announcements, or fee flows yet.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Remove BOM from team invite migrations after Supabase db push parser failure
+Files Changed: supabase/migrations/018_create_team_invites.sql, supabase/migrations/019_enable_team_invites_rls.sql, docs/09_AI_TASK_LOG.md
+Reason: Supabase db push failed at the first byte of 018_create_team_invites.sql because the file had a UTF-8 BOM, so the new team invite migrations were re-encoded without BOM for Postgres compatibility.
+
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Rebuild corrupted team i18n copy with safe Unicode escapes
+Files Changed: src/constants/team-ui.ts, docs/09_AI_TASK_LOG.md
+Reason: Team screens started rendering question marks because the shared team UI copy file had already been saved with corrupted KO/VI strings, so the team translation source was rewritten using Unicode escapes to make the strings stable across Windows encoding boundaries.
+
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Add Phase 3 team detail screen and team member roster view
+Files Changed: supabase/migrations/020_expand_team_member_reads.sql, src/types/team.types.ts, src/services/team.service.ts, src/hooks/useTeamDetail.ts, src/constants/team-ui.ts, src/app/(team)/_layout.tsx, src/app/(team)/[teamId].tsx, src/app/(tabs)/teams.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: Team creation and invite/join flows were already working, but users still could not inspect a team after joining. This change adds a dedicated team-detail route, a basic active-member roster, and a safe RLS expansion so active team members can read their own team roster without recursive policy evaluation.Date: 2026-03-24
+AI Tool: Codex
+Task: Reshape the team detail flow into a club dashboard skeleton and fix the team_members->profiles embed ambiguity
+Files Changed: src/services/team.service.ts, src/constants/team-hub.ts, src/app/(team)/_layout.tsx, src/app/(team)/[teamId].tsx, src/app/(team)/match-create.tsx, src/app/(team)/match-detail.tsx, src/app/(team)/match-vote.tsx, src/app/(team)/match-lineup.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The requested next structure moved beyond a plain team detail page into a club dashboard with match registration, voting, and lineup entry points. This update also fixes the PostgREST embed ambiguity between team_members and profiles by forcing the roster join through team_members_user_id_fkey, then adds UI skeleton routes for match create/detail/vote/lineup so the app structure can match the provided reference screens before the match backend exists.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Localize the new club/match skeleton screens consistently and make quarter-based screens depend on the selected quarter count
+Files Changed: src/constants/team-hub.ts, src/app/(team)/[teamId].tsx, src/app/(team)/match-create.tsx, src/app/(team)/match-detail.tsx, src/app/(team)/match-vote.tsx, src/app/(team)/match-lineup.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The first pass left the new club/match screens mixed between Korean and English and hardcoded quarter navigation to only Q1/Q2. This pass moved the visible labels into the shared team-hub copy and propagated quarterCount/quarterMinutes from match creation into match detail, vote, and lineup so the structure can handle 2/3/4-quarter amateur match formats.Date: 2026-03-24
+AI Tool: Codex
+Task: Add the first persisted match slice with match schema, create-match Edge Function, match service/hooks, and saved match detail reads
+Files Changed: supabase/migrations/021_create_match_core_tables.sql, supabase/migrations/022_apply_match_core_policies.sql, supabase/functions/create-match/index.ts, supabase/config.toml, src/types/match.types.ts, src/services/match.service.ts, src/hooks/useTeamMatches.ts, src/hooks/useMatchDetail.ts, src/app/(team)/_layout.tsx, src/app/(team)/[teamId].tsx, src/app/(team)/match-create.tsx, src/app/(team)/match-detail.tsx, src/constants/team-hub.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The club dashboard and match screens were already in place as UI skeletons, but nothing was persisted yet. This step adds the first saved match path, creates an attendance poll with each match, and lets the team detail screen read back the latest saved match and attendance summary.Date: 2026-03-24
+AI Tool: Codex
+Task: Rebuild the login screen using local main/logo assets and a hero-style action layout
+Files Changed: src/app/(auth)/login.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The user wanted the first attached soccer image concept applied to the login screen. The implementation now uses src/assets/images/main.png as the full-screen hero background, src/assets/images/logo.png in the upper sky area, and a large stacked CTA layout inspired by the provided reference while preserving existing email and Google login flows.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Refine login hero screen by removing the logo, splitting email sign-in into its own view, replacing footer links with customer center, and adding Facebook/Zalo CTA buttons with richer icons
+Files Changed: src/app/(auth)/login.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The first hero redesign still kept the logo and mixed the email form directly into the main CTA stack. This pass removes the logo, turns email sign-in into a dedicated in-screen view, swaps the footer utility links to a customer-center entry, and adds richer Facebook/Zalo/Google/email CTA buttons using Expo-provided vector icons.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Rebuild Expo Router route structure to match the updated v3.1/v1.3 documents with placeholder screens only
+Files Changed: legacy/app_20260324_router_rebuild (backup), src/app/**/*, src/shared/components/RoutePlaceholder.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The updated Tech Spec, Coding Rules, and Screen Spec changed the Expo Router group structure significantly. The existing app routes were backed up outside src and a new placeholder-only router tree was created first so future implementation can proceed on the correct folder/file structure.
+
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Implement the role switcher system with Zustand, a side drawer, and role-based bottom tab composition
+Files Changed: package.json, package-lock.json, src/store/role-switch.store.ts, src/constants/role-switcher.ts, src/shared/components/RoleSwitcherDrawer.tsx, src/app/(tabs)/_layout.tsx, src/app/(tabs)/schedule.tsx, src/app/(tabs)/match-control.tsx, src/app/(tabs)/revenue.tsx, src/app/(tabs)/booking-management.tsx, src/app/(tabs)/facility-management.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The updated Screen Spec requires a left-side role switch drawer and different bottom-tab sets for player, referee, and facility manager modes. This change adds a persisted activeRole store, a slide-in drawer component, and dynamic Tabs rendering that swaps the five-tab composition immediately when the active role changes.
+
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Finalize the role switcher system with cleaned multilingual labels, a left-side drawer menu, and a privacy-policy placeholder route
+Files Changed: src/constants/role-switcher.ts, src/shared/components/RoleSwitcherDrawer.tsx, src/app/(settings)/_layout.tsx, src/app/(settings)/privacy-policy.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The route skeleton already had a first pass of role switching, but the role/tab copy and drawer menu needed to be aligned to the updated Screen Spec. This pass stabilizes the Zustand-based activeRole flow, cleans the tab labels, and adds the missing privacy policy destination used by the side drawer menu.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Implement Screen Spec 5-3-A team chat with Supabase Realtime, React Query, and upward infinite scroll
+Files Changed: supabase/migrations/023_create_team_chat_core.sql, supabase/migrations/024_apply_team_chat_policies.sql, src/core/query/QueryProvider.tsx, src/core/i18n/team-chat-copy.ts, src/types/team-chat.types.ts, src/services/team-chat.service.ts, src/hooks/useTeamChat.ts, src/app/_layout.tsx, src/app/(team)/[teamId]/chat.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The updated Screen Spec requires a realtime team chat tab that uses service-layer Supabase access, React Query server state, and upward infinite scroll for older messages. This change adds the persisted chat table and storage bucket, wraps the app in a QueryClient provider, implements a service + hook pair using React Query and Supabase Realtime, and replaces the team chat placeholder route with a working chat screen.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Remove the root splash placeholder and restore actual start/login/home routing
+Files Changed: src/app/index.tsx, src/app/(auth)/login.tsx, src/app/(tabs)/home.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The rebuilt Expo Router tree still left `/`, `/(auth)/login`, and `/(tabs)/home` as placeholders, so the app opened to a dummy splash card instead of a real start flow. The root route now redirects into the tabs home entry, and both login/home routes were restored as functional screens.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Restore the hero login screen and replace placeholder main tabs with actual screens or real empty states
+Files Changed: src/app/(auth)/login.tsx, src/app/(tabs)/team.tsx, src/app/(tabs)/profile.tsx, src/app/(tabs)/social.tsx, src/app/(tabs)/search.tsx, src/app/(tabs)/schedule.tsx, src/app/(tabs)/match-control.tsx, src/app/(tabs)/revenue.tsx, src/app/(tabs)/booking-management.tsx, src/app/(tabs)/facility-management.tsx, src/shared/components/FeatureEmptyStateScreen.tsx, src/constants/role-switcher.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The rebuilt router tree had left most non-home tabs on the RoutePlaceholder card, and a later restore pass had overwritten the previously designed hero-style login screen. This change restores the hero login flow with the `main.png` background and email sub-view, revives the actual team/profile tabs from the legacy app backup, and replaces the remaining role-based tab placeholders with real empty-state dashboards.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Restore the settings stack from placeholders to working screens
+Files Changed: src/app/(settings)/_layout.tsx, src/app/(settings)/settings.tsx, src/app/(settings)/language.tsx, src/app/(settings)/region.tsx, src/app/(settings)/roles.tsx, src/app/(settings)/notifications.tsx, src/app/(settings)/visibility.tsx, src/app/(settings)/privacy-policy.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: After the router skeleton rebuild, the settings main screen and several destinations still rendered the generic RoutePlaceholder card. This pass restores the working settings screens from the legacy backup and replaces the privacy-policy route with a real static policy info screen so settings navigation no longer falls back to placeholders.
+
+Date: 2026-03-24
+AI Tool: Codex
+Task: Route logout and unauthenticated redirects through the app start route
+Files Changed: src/app/index.tsx, src/shared/components/RoleSwitcherDrawer.tsx, src/components/SessionTimeoutGate.tsx, src/app/(settings)/settings.tsx, src/app/(settings)/language.tsx, src/app/(settings)/region.tsx, src/app/(settings)/roles.tsx, src/app/(settings)/visibility.tsx, src/app/(tabs)/team.tsx, src/app/(tabs)/profile.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: Logout and auth guards were sending the user directly to `/(auth)/login`, which bypassed the root start flow and surfaced the wrong screen. The root route now chooses the correct start destination based on auth state, and logout/session-timeout/auth-guard redirects now consistently return to `/` first.
+Date: 2026-03-24
+AI Tool: Codex
+Task: Replace the team-detail placeholder and rebuild the player profile screen with a real dashboard layout
+Files Changed: src/app/(tabs)/profile/index.tsx, src/app/(tabs)/profile.tsx, src/app/(team)/[teamId]/home.tsx, src/app/(team)/[teamId]/index.tsx, src/app/(team)/[teamId]/_layout.tsx, src/hooks/usePlayerProfileDashboard.ts, src/hooks/useTeamDetailQuery.ts, src/shared/components/ProfileRadarChart.tsx, src/constants/profile-dashboard.ts, src/constants/role-switcher.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The team detail route was still surfacing a placeholder and the player profile tab needed to be rebuilt to match the updated Screen Spec with a dark hero header, stats card, team CTA card, and a radar-style skill card. This pass restores the team detail route as a real screen, adds query hooks for the team/profile dashboard, and replaces the old profile tab with a design-driven player profile layout.
+
+- 2026-03-24: Added player weak-foot skill and play-style profile sections, created play-style screen, and extended update-player-profile flow plus migration 025 for new player profile fields.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Implement the 3-step team creation flow, fix the newly added team-create copy corruption, and deploy the backend changes
+Files Changed: src/constants/team-create.ts, src/shared/regions/vietnam-regions.ts, src/app/(team)/_layout.tsx, src/app/(team)/create/_layout.tsx, src/app/(team)/create/index.tsx, src/app/(team)/create/schedule.tsx, src/app/(team)/create/tactics.tsx, src/app/(team)/create/complete.tsx, src/services/team.service.ts, legacy/router_backup/team-create.tsx, supabase/migrations/026_expand_team_schema_for_create_flow.sql, supabase/migrations/027_create_team_assets_bucket.sql, supabase/functions/create-team/index.ts, supabase/functions/upload-team-asset/index.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The previous single-step team create screen did not match the updated KickGo documents or screen spec, and the newly added team-create slice had corrupted copy. The flow is now rebuilt into three routed steps plus a complete screen, backed by Zustand draft state, react-hook-form + zod, team emblem/photo upload through an Edge Function, and a final create-team submit on step 3. Remote Supabase migrations were pushed and the create-team/upload-team-asset functions were deployed. A curl smoke test against create-team returned the expected authenticated error response, confirming the live endpoint is responding.
+
+- 2026-03-25: Restored /(team)/join screen from placeholder to working invite-code join flow and fixed team stack join title.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Redesign the team list screen to match the team detail visual language
+Files Changed: src/app/(tabs)/team.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The old team list still used the heavy beige background, top CTA buttons, and text-first cards. The screen now uses a white background, dark hero team cards, a 2x2 action grid, a FAB with a bottom sheet for create/join actions, and a centered empty state while keeping the existing team fetch logic intact.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Replace the team match calendar placeholder with a real match list screen
+Files Changed: src/app/(team)/[teamId]/matches.tsx, src/app/(team)/[teamId]/_layout.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The team match calendar route was still rendering a placeholder. It now uses the existing team detail and match hooks to show grouped match cards, attendance summaries, and empty/error states, while the team detail stack titles were also cleaned up.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Implement the KickGo home screen with section-based React Query cards and replace the old gate-style tab home screen
+Files Changed: src/app/(tabs)/home.tsx, src/app/(tabs)/_layout.tsx, src/features/home/home-copy.ts, src/features/home/components/HomeNextMatch.tsx, src/features/home/components/HomePendingActions.tsx, src/features/home/components/HomeRecentResults.tsx, src/features/home/components/HomeRegionRank.tsx, src/features/home/components/HomePopularShorts.tsx, src/features/home/components/HomeMyTeams.tsx, src/constants/role-switcher.ts, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The tabs home route was still a simple auth/profile gate screen and did not follow the updated Screen Spec. The home tab now uses section-level React Query data, a custom top bar, fallback banners, quick actions, next match, team chips, pending actions, recent results, region rank, and popular shorts while keeping failures isolated by section instead of using one global spinner.
+
+Date: 2026-03-25
+AI Tool: Codex
+Task: Replace the team-find placeholder path and make remaining placeholder screens back-navigable
+Files Changed: src/app/(team)/find.tsx, src/app/(team)/_layout.tsx, src/app/(tabs)/profile/index.tsx, src/hooks/useTeamSearchQuery.ts, src/services/team.service.ts, src/shared/components/RoutePlaceholder.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The profile dashboard still routed "íŒ€ ì°¾ê¸°" into a placeholder path, and many unfinished routes trapped the user without a working back action. Added a real public team search screen, pointed the team-find CTA to it, and rebuilt the shared placeholder component into a neutral coming-soon screen with back/home actions.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Fix placeholder route traps across the app and replace the team-find placeholder with a real search screen
+Files Changed: src/app/(team)/find.tsx, src/app/(team)/_layout.tsx, src/hooks/useTeamSearchQuery.ts, src/services/team.service.ts, src/shared/components/RoutePlaceholder.tsx, src/app/(tabs)/profile/index.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The app still had many placeholder routes and some of them trapped navigation without a usable back path. Rebuilt the shared placeholder screen with back/home actions, repaired the broken team route files, and replaced the team-find placeholder with a real public team search screen.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Fix the role-switch navigation warning when switching to facility_manager
+Files Changed: src/shared/components/RoleSwitcherDrawer.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: Role switching was dispatching a direct replace into the tabs home route while the tab tree was being rebuilt for the new role, which caused a REPLACE action warning in development. Changed role switching to return through the root route first so auth/root routing can safely land on the current home screen.
+Date: 2026-03-25
+AI Tool: Codex
+Task: Remove the extra top gap above the profile dark header
+Files Changed: src/app/(tabs)/profile/index.tsx, docs/09_AI_TASK_LOG.md, docs/10_CHANGELOG.md, docs/11_DEVELOPMENT_LOG.md
+Reason: The profile tab was applying a top SafeArea inset even though the tabs navigator already rendered the top header, which created a large gray gap between the title bar and the dark profile hero. Limited the screen SafeArea to the bottom edge only.
+
+Date: 2026-03-25
+AI Tool: Codex
+Task: Add role-based profile branching for player, referee, and facility manager dashboards
+Files Changed: src/app/(tabs)/profile/index.tsx, src/components/profile/PlayerProfile.tsx, src/components/profile/FacilityManagerProfile.tsx, src/components/profile/RefereeProfile.tsx, src/components/profile/ProfileHeroHeader.tsx, src/components/profile/profileShared.ts, src/hooks/useFacilityManagerProfile.ts, src/hooks/useRefereeProfileDashboard.ts, src/store/role-switch.store.ts, src/app/(referee)/availability.tsx, src/app/(facility)/notice-create.tsx, src/app/(facility)/_layout.tsx, src/app/(facility)/[facilityId]/index.tsx, docs/09_AI_TASK_LOG.md
+Reason: Split profile UI by active role so facility managers and referees no longer see the player profile screen, and remove placeholder blockers on immediate role-specific routes.
+
+
+- 2026-03-25: È¨ QuickActions¸¦ activeRole ±â¹ÝÀ¸·Î ºÐ±âÇÏ°í ¿ªÇÒº° ½ÇÁ¦ ¶ó¿ìÆ®¸¦ ¿¬°áÇÔ.
+
+- 2026-03-25: HomeQuickActions ÇÑ±Û ¶óº§À» À¯´ÏÄÚµå ÀÌ½ºÄÉÀÌÇÁ·Î ÀçÀúÀåÇØ ºü¸¥ ½ÇÇà ÅØ½ºÆ® ±úÁüÀ» ¼öÁ¤ÇÔ.
+
+- 2026-03-25: È¨ ¿Âº¸µù Ä«µå ÆÇÁ¤À» activeRole ±â¹Ý useOnboardingStatus ÈÅÀ¸·Î ºÐ¸®ÇÏ°í, facility_manager´Â ¿Âº¸µù Ä«µå ´ë½Å ¿îµ¿Àå µî·Ï CTA¸¸ º¸ÀÌµµ·Ï ¼öÁ¤ÇÔ.
+- 2026-03-25: /(onboarding)/player, /(onboarding)/referee ½ÇÈ­¸éÀ» Ãß°¡ÇØ ½ÉÆÇ µî·Ï°ú ¼±¼ö ÇÁ·ÎÇÊ ÁøÀÔ °æ·Î°¡ placeholder·Î ºüÁöÁö ¾Ê°Ô ÇÔ.
+
+- 2026-03-25: È¨ ¿Âº¸µù Ä«µå ÆÇÁ¤À» activeRole ±â¹Ý useOnboardingStatus ÈÅÀ¸·Î ºÐ¸®ÇÏ°í, facility_manager´Â ¿Âº¸µù Ä«µå ´ë½Å ¿îµ¿Àå µî·Ï CTA¸¸ º¸ÀÌµµ·Ï ¼öÁ¤ÇÔ.
+- 2026-03-25: /(onboarding)/player, /(onboarding)/referee ½ÇÈ­¸éÀ» Ãß°¡ÇØ ½ÉÆÇ µî·Ï°ú ¼±¼ö ÇÁ·ÎÇÊ ÁøÀÔ °æ·Î°¡ placeholder·Î ºüÁöÁö ¾Ê°Ô ÇÔ.
+
+- 2026-03-25: È¨ ¿Âº¸µù Ä«µå ÆÇÁ¤À» activeRole ±â¹Ý useOnboardingStatus ÈÅÀ¸·Î ºÐ¸®ÇÏ°í, facility_manager´Â ¿Âº¸µù Ä«µå ´ë½Å ¿îµ¿Àå µî·Ï CTA¸¸ º¸ÀÌµµ·Ï ¼öÁ¤ÇÔ.
+- 2026-03-25: /(onboarding)/player, /(onboarding)/referee ½ÇÈ­¸éÀ» Ãß°¡ÇØ ½ÉÆÇ µî·Ï°ú ¼±¼ö ÇÁ·ÎÇÊ ÁøÀÔ °æ·Î°¡ placeholder·Î ºüÁöÁö ¾Ê°Ô ÇÔ.

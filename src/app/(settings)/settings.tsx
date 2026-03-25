@@ -1,19 +1,23 @@
-﻿import Constants from "expo-constants";
+import Constants from "expo-constants";
 import { router } from "expo-router";
-import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { COLORS } from "@/constants/colors";
 import { SPACING } from "@/constants/spacing";
+import { getOptionLabel, getVisibilityOptions } from "@/constants/profile-options";
+import { useI18n } from "@/core/i18n/LanguageProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 
 export default function SettingsScreen(): JSX.Element {
+  const { language, t } = useI18n();
   const { isAuthenticated, isLoading: isAuthLoading, signOut } = useAuth();
-  const { hasProfile, isProfileLoading, profileBundle } = useProfile({ enabled: isAuthenticated });
+  const { hasProfile, isProfileLoading, nextOnboardingRoute, profileBundle } = useProfile({ enabled: isAuthenticated });
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const visibilityOptions = useMemo(() => getVisibilityOptions(language), [language]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -21,61 +25,86 @@ export default function SettingsScreen(): JSX.Element {
     }
 
     if (!isAuthenticated) {
-      router.replace("/(auth)/login");
-      return;
+      router.replace("/");
     }
+  }, [isAuthenticated, isAuthLoading]);
 
-    if (!isProfileLoading && !hasProfile) {
-      router.replace("/(auth)/phone-verify");
-    }
-  }, [hasProfile, isAuthenticated, isAuthLoading, isProfileLoading]);
-
-  if (isAuthLoading || isProfileLoading) {
-    return (
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+  const renderContent = (): JSX.Element => {
+    if (isAuthLoading || isProfileLoading) {
+      return (
         <View style={styles.container}>
-          <Text style={styles.title}>설정</Text>
-          <Text style={styles.subtitle}>설정 정보를 불러오고 있습니다.</Text>
+          <Text style={styles.title}>{t("settings.main.title")}</Text>
+          <Text style={styles.subtitle}>{t("settings.main.loadingSubtitle")}</Text>
         </View>
-      </SafeAreaView>
-    );
-  }
+      );
+    }
 
-  return (
-    <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+    if (!hasProfile) {
+      return (
+        <View style={styles.container}>
+          <Text style={styles.title}>{t("settings.main.title")}</Text>
+          <Text style={styles.subtitle}>{t("settings.main.needProfileSubtitle")}</Text>
+          <View style={styles.card}>
+            <Text style={styles.value}>{t("settings.main.needProfileHelper")}</Text>
+            <PrimaryButton label={t("settings.main.continueOnboarding")} onPress={() => router.replace(nextOnboardingRoute)} />
+            <PrimaryButton label={t("settings.main.goHome")} variant="outline" onPress={() => router.replace("/")} />
+          </View>
+        </View>
+      );
+    }
+
+    const visibilityLabel = getOptionLabel(visibilityOptions, profileBundle.profile?.visibility ?? null) ?? t("settings.main.notSet");
+
+    return (
       <View style={styles.container}>
-        <Text style={styles.title}>설정</Text>
-        <Text style={styles.subtitle}>Phase 2 MVP 공통 설정 항목입니다.</Text>
+        <Text style={styles.title}>{t("settings.main.title")}</Text>
+        <Text style={styles.subtitle}>{t("settings.main.subtitle")}</Text>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Profile</Text>
-          <Text style={styles.value}>{profileBundle.profile?.display_name ?? "미설정"}</Text>
-          <PrimaryButton label="프로필 기본 수정" onPress={() => router.push("/(onboarding)/create-profile?mode=edit")} />
+          <Text style={styles.sectionTitle}>{t("settings.main.profileSection")}</Text>
+          <Text style={styles.value}>{profileBundle.profile?.display_name ?? t("settings.main.notSet")}</Text>
+          <Text style={styles.value}>{`${t("settings.main.visibilityPrefix")}: ${visibilityLabel}`}</Text>
+          <PrimaryButton label={t("settings.main.editProfile")} onPress={() => router.push("/(onboarding)/create-profile?mode=edit")} />
+          <PrimaryButton label={t("settings.main.profileVisibility")} onPress={() => router.push("/(settings)/visibility")} variant="secondary" />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Common Settings</Text>
+          <Text style={styles.sectionTitle}>{t("settings.main.commonSection")}</Text>
           <View style={styles.buttonGroup}>
-            <PrimaryButton label="Language" onPress={() => router.push("/(settings)/language")} variant="secondary" />
-            <PrimaryButton label="Region" onPress={() => router.push("/(settings)/region")} variant="secondary" />
-            <PrimaryButton label="Account Roles" onPress={() => router.push("/(settings)/roles")} variant="secondary" />
+            <PrimaryButton label={t("settings.main.language")} onPress={() => router.push("/(settings)/language")} variant="secondary" />
+            <PrimaryButton label={t("settings.main.region")} onPress={() => router.push("/(settings)/region")} variant="secondary" />
+            <PrimaryButton label={t("settings.main.roles")} onPress={() => router.push("/(settings)/roles")} variant="secondary" />
+            <PrimaryButton label={t("settings.main.notifications")} onPress={() => router.push("/(settings)/notifications")} variant="secondary" />
+            <PrimaryButton label={t("settings.main.account")} onPress={() => router.push("/(settings)/account")} variant="secondary" />
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>App</Text>
-          <Text style={styles.value}>버전 {appVersion}</Text>
-          <PrimaryButton label="Logout" onPress={() => void signOut()} variant="outline" />
+          <Text style={styles.sectionTitle}>{t("settings.main.appSection")}</Text>
+          <Text style={styles.value}>{`${t("settings.main.versionPrefix")} ${appVersion}`}</Text>
+          <PrimaryButton label={t("common.logout")} onPress={() => void signOut()} variant="outline" />
         </View>
       </View>
+    );
+  };
+
+  return (
+    <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {renderContent()}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
+  scrollContent: { flexGrow: 1, paddingBottom: SPACING.xl },
   container: {
-    flex: 1,
     paddingHorizontal: SPACING.screenHorizontal,
     paddingVertical: SPACING.xl,
     backgroundColor: COLORS.background,

@@ -10,6 +10,7 @@ import {
   assertBirthYear,
   assertLanguage,
   assertRegion,
+  assertVisibility,
   readOptionalNullableNumber,
   readOptionalString,
   readRequiredString,
@@ -23,7 +24,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   if (request.method !== "POST") {
-    return errorResponse("method_not_allowed", "POST ??? ?????.", 405);
+    return errorResponse("method_not_allowed", "POST requests only.", 405);
   }
 
   try {
@@ -39,6 +40,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const preferredLanguage = assertLanguage(readRequiredString(body, "preferred_language"));
     const bio = readOptionalString(body, "bio") ?? "";
     const initialAccountType = assertAccountType(readRequiredString(body, "initial_account_type"));
+    const visibility = assertVisibility(readOptionalString(body, "visibility") ?? "members_only");
 
     assertRegion(countryCode, provinceCode, districtCode);
 
@@ -58,7 +60,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     if (existingProfile) {
-      return errorResponse("profile_exists", "?? ?? ???? ?????.", 409);
+      return errorResponse("profile_exists", "Common profile already exists.", 409);
     }
 
     const profilePayload = {
@@ -72,6 +74,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
       province_code: provinceCode,
       district_code: districtCode,
       preferred_language: preferredLanguage,
+      visibility,
     };
 
     const { data: insertedProfile, error: insertProfileError } = await client
@@ -88,11 +91,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         code: insertProfileError.code,
         payload: profilePayload,
       });
-      return errorResponse(
-        "profile_insert_failed",
-        insertProfileError.message,
-        400,
-      );
+      return errorResponse("profile_insert_failed", insertProfileError.message, 400);
     }
 
     const rolePayload = {
@@ -117,11 +116,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
         console.error("[create-profile] rollback_profile_delete_failed", rollbackError);
       }
 
-      return errorResponse(
-        "account_type_insert_failed",
-        insertRoleError.message,
-        400,
-      );
+      return errorResponse("account_type_insert_failed", insertRoleError.message, 400);
     }
 
     return successResponse(
@@ -136,7 +131,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     console.error("[create-profile] unexpected_failure", error);
     return errorResponse(
       "create_profile_failed",
-      error instanceof Error ? error.message : "?? ??? ??? ??????.",
+      error instanceof Error ? error.message : "Failed to create common profile.",
       400,
     );
   }

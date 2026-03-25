@@ -1,9 +1,11 @@
-﻿import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "@/constants/colors";
-import { SPACING } from "@/constants/spacing";
 import type { SelectOption } from "@/constants/profile-options";
+import { SPACING } from "@/constants/spacing";
+import { withAppFont } from "@/constants/typography";
+import { useI18n } from "@/core/i18n/LanguageProvider";
 
 type SelectFieldProps = {
   label: string;
@@ -24,19 +26,20 @@ function getLabel(options: SelectOption[], value: string | null): string | null 
 
 export function SelectField(props: SelectFieldProps): JSX.Element {
   const { label, placeholder, value, options, onChange, isDisabled = false } = props;
+  const { t } = useI18n();
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const selectedLabel = getLabel(options, value);
 
   return (
     <>
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={withAppFont(styles.label)}>{label}</Text>
         <Pressable
           disabled={isDisabled}
           onPress={() => setIsVisible(true)}
           style={[styles.trigger, isDisabled && styles.disabled]}
         >
-          <Text style={selectedLabel ? styles.valueText : styles.placeholderText}>
+          <Text style={withAppFont(selectedLabel ? styles.valueText : styles.placeholderText)}>
             {selectedLabel ?? placeholder}
           </Text>
         </Pressable>
@@ -46,7 +49,7 @@ export function SelectField(props: SelectFieldProps): JSX.Element {
         <View style={styles.overlay}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsVisible(false)} />
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{label}</Text>
+            <Text style={withAppFont(styles.sheetTitle)}>{label}</Text>
             <ScrollView contentContainerStyle={styles.optionList}>
               {options.map((option) => {
                 const isSelected = option.value === value;
@@ -61,7 +64,10 @@ export function SelectField(props: SelectFieldProps): JSX.Element {
                     style={[styles.option, isSelected && styles.optionSelected]}
                   >
                     <Text
-                      style={[styles.optionLabel, isSelected && styles.optionLabelSelected]}
+                      style={withAppFont([
+                        styles.optionLabel,
+                        isSelected && styles.optionLabelSelected,
+                      ])}
                     >
                       {option.label}
                     </Text>
@@ -70,7 +76,7 @@ export function SelectField(props: SelectFieldProps): JSX.Element {
               })}
             </ScrollView>
             <Pressable onPress={() => setIsVisible(false)} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>닫기</Text>
+              <Text style={withAppFont(styles.closeButtonText)}>{t("common.cancel")}</Text>
             </Pressable>
           </View>
         </View>

@@ -1,7 +1,8 @@
-﻿import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text } from "react-native";
 
 import { COLORS } from "@/constants/colors";
 import { SPACING } from "@/constants/spacing";
+import { withAppFont } from "@/constants/typography";
 
 type ButtonVariant = "primary" | "secondary" | "outline";
 
@@ -26,7 +27,7 @@ export function PrimaryButton(props: PrimaryButtonProps): JSX.Element {
         isDisabled && styles.disabled,
       ]}
     >
-      <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
+      <Text style={withAppFont([styles.label, labelStyles[variant]])}>{label}</Text>
     </Pressable>
   );
 }

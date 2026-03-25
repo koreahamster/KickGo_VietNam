@@ -1,4 +1,4 @@
-﻿import { router } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,16 +8,19 @@ import { SelectField } from "@/components/SelectField";
 import { COLORS } from "@/constants/colors";
 import { LANGUAGE_OPTIONS } from "@/constants/profile-options";
 import { SPACING } from "@/constants/spacing";
+import { useI18n } from "@/core/i18n/LanguageProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import type { SupportedLanguage } from "@/types/profile.types";
 
 export default function LanguageScreen(): JSX.Element {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { language: appLanguage, setLanguage: setAppLanguage, t } = useI18n();
   const {
     hasProfile,
     isProfileLoading,
     isSubmittingProfile,
+    nextOnboardingRoute,
     profileBundle,
     profileErrorMessage,
     profileStatusMessage,
@@ -26,8 +29,8 @@ export default function LanguageScreen(): JSX.Element {
   const [language, setLanguage] = useState<SupportedLanguage | null>(null);
 
   useEffect(() => {
-    setLanguage(profileBundle.profile?.preferred_language ?? null);
-  }, [profileBundle.profile?.preferred_language]);
+    setLanguage(profileBundle.profile?.preferred_language ?? appLanguage);
+  }, [appLanguage, profileBundle.profile?.preferred_language]);
 
   useEffect(() => {
     if (isAuthLoading) {
@@ -35,25 +38,23 @@ export default function LanguageScreen(): JSX.Element {
     }
 
     if (!isAuthenticated) {
-      router.replace("/(auth)/login");
-      return;
+      router.replace("/");
     }
-
-    if (!isProfileLoading && !hasProfile) {
-      router.replace("/(auth)/phone-verify");
-    }
-  }, [hasProfile, isAuthenticated, isAuthLoading, isProfileLoading]);
+  }, [isAuthenticated, isAuthLoading]);
 
   const handleSave = async (): Promise<void> => {
     if (!language) {
       return;
     }
 
+    const previousLanguage = appLanguage;
+
     try {
+      await setAppLanguage(language);
       await updateCommonProfile({ preferredLanguage: language });
       router.back();
     } catch {
-      // Error state is already handled in useProfile.
+      await setAppLanguage(previousLanguage);
     }
   };
 
@@ -61,8 +62,23 @@ export default function LanguageScreen(): JSX.Element {
     return (
       <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={styles.title}>언어 설정</Text>
-          <Text style={styles.subtitle}>현재 언어 설정을 불러오고 있습니다.</Text>
+          <Text style={styles.title}>{t("settings.language.title")}</Text>
+          <Text style={styles.subtitle}>{t("settings.language.loadingSubtitle")}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.title}>{t("settings.language.title")}</Text>
+          <Text style={styles.subtitle}>{t("settings.language.needProfileSubtitle")}</Text>
+          <View style={styles.card}>
+            <PrimaryButton label={t("settings.language.continueOnboarding")} onPress={() => router.replace(nextOnboardingRoute)} />
+            <PrimaryButton label={t("settings.language.backToSettings")} variant="outline" onPress={() => router.replace("/(settings)/settings")} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -71,22 +87,20 @@ export default function LanguageScreen(): JSX.Element {
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>언어 설정</Text>
-        <Text style={styles.subtitle}>앱 기본 표시 언어를 변경합니다.</Text>
+        <Text style={styles.title}>{t("settings.language.title")}</Text>
+        <Text style={styles.subtitle}>{t("settings.language.subtitle")}</Text>
         <View style={styles.card}>
           <SelectField
-            label="언어"
-            placeholder="언어 선택"
+            label={t("common.language")}
+            placeholder={t("settings.language.placeholder")}
             value={language}
             options={LANGUAGE_OPTIONS}
             onChange={(value) => setLanguage(value as SupportedLanguage | null)}
           />
           <PrimaryButton
-            label={isSubmittingProfile ? "저장 중..." : "언어 저장"}
-            onPress={() => {
-              void handleSave();
-            }}
-            isDisabled={isSubmittingProfile || !language}
+            label={isSubmittingProfile ? t("settings.language.saving") : t("common.save")}
+            onPress={() => void handleSave()}
+            isDisabled={isSubmittingProfile || !language || language === appLanguage}
           />
         </View>
         {profileErrorMessage ? <Text style={styles.errorText}>{profileErrorMessage}</Text> : null}

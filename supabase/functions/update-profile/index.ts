@@ -1,9 +1,10 @@
-﻿import { createUserClient, requireUser } from "../_shared/auth.ts";
+import { createUserClient, requireUser } from "../_shared/auth.ts";
 import { errorResponse, handleOptionsRequest, parseJsonBody, successResponse } from "../_shared/http.ts";
 import {
   assertBirthYear,
   assertLanguage,
   assertRegion,
+  assertVisibility,
   readOptionalNullableNumber,
   readOptionalString,
 } from "../_shared/validation.ts";
@@ -16,7 +17,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   if (request.method !== "POST") {
-    return errorResponse("method_not_allowed", "POST 요청만 허용됩니다.", 405);
+    return errorResponse("method_not_allowed", "POST requests only.", 405);
   }
 
   try {
@@ -31,17 +32,22 @@ Deno.serve(async (request: Request): Promise<Response> => {
     const districtCode = readOptionalString(body, "district_code");
     const preferredLanguageRaw = readOptionalString(body, "preferred_language");
     const bio = readOptionalString(body, "bio");
+    const visibilityRaw = readOptionalString(body, "visibility");
 
     if (preferredLanguageRaw) {
       assertLanguage(preferredLanguageRaw);
+    }
+
+    if (visibilityRaw) {
+      assertVisibility(visibilityRaw);
     }
 
     if (countryCode || provinceCode || districtCode) {
       if (!countryCode || !provinceCode || !districtCode) {
         return errorResponse(
           "invalid_region_update",
-          "country_code, province_code, district_code 는 함께 전달되어야 합니다.",
-          400
+          "country_code, province_code, and district_code must be provided together.",
+          400,
         );
       }
 
@@ -78,8 +84,12 @@ Deno.serve(async (request: Request): Promise<Response> => {
       updatePayload.bio = bio;
     }
 
+    if (visibilityRaw !== undefined) {
+      updatePayload.visibility = visibilityRaw;
+    }
+
     if (Object.keys(updatePayload).length === 0) {
-      return errorResponse("empty_update", "수정할 값이 없습니다.", 400);
+      return errorResponse("empty_update", "No fields were provided for update.", 400);
     }
 
     const { data: existingProfile, error: existingProfileError } = await client
@@ -93,7 +103,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     if (!existingProfile) {
-      return errorResponse("profile_missing", "공통 프로필이 존재하지 않습니다.", 404);
+      return errorResponse("profile_missing", "Common profile does not exist.", 404);
     }
 
     const { data: updatedProfile, error: updateError } = await client
@@ -113,8 +123,8 @@ Deno.serve(async (request: Request): Promise<Response> => {
   } catch (error: unknown) {
     return errorResponse(
       "update_profile_failed",
-      error instanceof Error ? error.message : "프로필 수정에 실패했습니다.",
-      400
+      error instanceof Error ? error.message : "Failed to update profile.",
+      400,
     );
   }
 });

@@ -1,13 +1,17 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 
+import { getOnboardingRoute, getOnboardingStep, getPendingRoleOnboarding } from "@/lib/onboarding";
 import {
   addAccountType as addAccountTypeService,
   createPlayerProfile as createPlayerProfileService,
   createProfile as createProfileService,
   createRefereeProfile as createRefereeProfileService,
   getMyProfileBundle,
+  requestAvatarUpload as requestAvatarUploadService,
   updatePlayerProfile as updatePlayerProfileService,
   updateProfile as updateProfileService,
+  updateProfileVisibility as updateProfileVisibilityService,
+  uploadAvatar as uploadAvatarService,
 } from "@/services/profile.service";
 import type {
   AccountType,
@@ -16,9 +20,13 @@ import type {
   CreateProfileResult,
   PlayerProfileRecord,
   ProfileBundle,
+  RequestAvatarUploadInput,
+  RequestAvatarUploadResult,
   RoleProfileResult,
+  SupportedVisibility,
   UpdateCommonProfileInput,
   UpdatePlayerProfileInput,
+  UploadAvatarInput,
 } from "@/types/profile.types";
 
 type UseProfileOptions = {
@@ -31,6 +39,8 @@ type UseProfileResult = {
   accountTypes: AccountType[];
   playerProfile: PlayerProfileRecord | null;
   pendingRoleOnboarding: AccountType[];
+  onboardingStep: "create-profile" | "role-onboarding" | "done";
+  nextOnboardingRoute: "/(onboarding)/create-profile" | "/(onboarding)/role-onboarding" | "/";
   isProfileLoading: boolean;
   isSubmittingProfile: boolean;
   profileErrorMessage: string | null;
@@ -38,6 +48,9 @@ type UseProfileResult = {
   loadProfileBundle: () => Promise<ProfileBundle>;
   createCommonProfile: (input: CreateCommonProfileInput) => Promise<CreateProfileResult | null>;
   updateCommonProfile: (input: UpdateCommonProfileInput) => Promise<void>;
+  requestAvatarUpload: (input: RequestAvatarUploadInput) => Promise<RequestAvatarUploadResult>;
+  uploadAvatar: (input: UploadAvatarInput) => Promise<RequestAvatarUploadResult>;
+  updateProfileVisibility: (visibility: SupportedVisibility) => Promise<void>;
   addAccountType: (type: AccountType) => Promise<void>;
   createPlayerProfile: (input: CreatePlayerProfileInput) => Promise<RoleProfileResult>;
   updatePlayerProfile: (input: UpdatePlayerProfileInput) => Promise<RoleProfileResult>;
@@ -49,7 +62,7 @@ function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return "프로필 처리 중 오류가 발생했습니다.";
+  return "Profile request failed.";
 }
 
 function isProfileExistsError(error: unknown): boolean {
@@ -57,7 +70,7 @@ function isProfileExistsError(error: unknown): boolean {
     return false;
   }
 
-  return error.message.includes("profile_exists") || error.message.includes("이미 공통 프로필이 존재합니다");
+  return error.message.includes("profile_exists") || error.message.includes("profile already exists");
 }
 
 const EMPTY_BUNDLE: ProfileBundle = {
@@ -105,7 +118,7 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
   const runMutation = async <TResult>(
     action: () => Promise<TResult>,
     successMessage: string,
-    afterSuccess?: (result: TResult) => void
+    afterSuccess?: (result: TResult) => void,
   ): Promise<TResult> => {
     try {
       setIsSubmittingProfile(true);
@@ -124,19 +137,9 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
     }
   };
 
-  const pendingRoleOnboarding = useMemo(() => {
-    const pending: AccountType[] = [];
-
-    if (profileBundle.accountTypes.includes("player") && !profileBundle.playerProfile) {
-      pending.push("player");
-    }
-
-    if (profileBundle.accountTypes.includes("referee") && !profileBundle.refereeProfile) {
-      pending.push("referee");
-    }
-
-    return pending;
-  }, [profileBundle.accountTypes, profileBundle.playerProfile, profileBundle.refereeProfile]);
+  const pendingRoleOnboarding = useMemo(() => getPendingRoleOnboarding(profileBundle), [profileBundle]);
+  const onboardingStep = useMemo(() => getOnboardingStep(profileBundle), [profileBundle]);
+  const nextOnboardingRoute = useMemo(() => getOnboardingRoute(profileBundle), [profileBundle]);
 
   return {
     profileBundle,
@@ -144,6 +147,8 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
     accountTypes: profileBundle.accountTypes,
     playerProfile: profileBundle.playerProfile,
     pendingRoleOnboarding,
+    onboardingStep,
+    nextOnboardingRoute,
     isProfileLoading,
     isSubmittingProfile,
     profileErrorMessage,
@@ -153,7 +158,7 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
       try {
         return await runMutation(
           async () => createProfileService(input),
-          "공통 프로필이 저장되었습니다.",
+          "Common profile saved.",
           (result) => {
             setProfileBundle((current) => ({
               ...current,
@@ -169,12 +174,13 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
                 province_code: input.provinceCode,
                 district_code: input.districtCode,
                 preferred_language: input.preferredLanguage,
+                visibility: input.visibility ?? "members_only",
               },
               accountTypes: current.accountTypes.includes(input.initialAccountType)
                 ? current.accountTypes
                 : [...current.accountTypes, input.initialAccountType],
             }));
-          }
+          },
         );
       } catch (error: unknown) {
         if (!isProfileExistsError(error)) {
@@ -183,22 +189,77 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
 
         await loadProfileBundle();
         setProfileErrorMessage(null);
-        setProfileStatusMessage("이미 생성된 공통 프로필을 불러왔습니다.");
+        setProfileStatusMessage("Existing common profile loaded.");
         return null;
       }
     },
     updateCommonProfile: async (input) =>
-      runMutation(async () => {
-        await updateProfileService(input);
-      }, "프로필이 수정되었습니다."),
+      runMutation(
+        async () => {
+          await updateProfileService(input);
+        },
+        "Profile updated.",
+      ),
+    requestAvatarUpload: async (input) =>
+      runMutation(
+        async () => requestAvatarUploadService(input),
+        "Avatar upload URL prepared.",
+        (result) => {
+          setProfileBundle((current) => ({
+            ...current,
+            profile: current.profile
+              ? {
+                  ...current.profile,
+                  avatar_url: result.avatar_url,
+                }
+              : current.profile,
+          }));
+        },
+      ),
+    uploadAvatar: async (input) =>
+      runMutation(
+        async () => uploadAvatarService(input),
+        "Avatar updated.",
+        (result) => {
+          setProfileBundle((current) => ({
+            ...current,
+            profile: current.profile
+              ? {
+                  ...current.profile,
+                  avatar_url: result.avatar_url,
+                }
+              : current.profile,
+          }));
+        },
+      ),
+    updateProfileVisibility: async (visibility) => {
+      await runMutation(
+        async () => updateProfileVisibilityService(visibility),
+        "Profile visibility updated.",
+        (result) => {
+          setProfileBundle((current) => ({
+            ...current,
+            profile: current.profile
+              ? {
+                  ...current.profile,
+                  visibility: result.visibility,
+                }
+              : current.profile,
+          }));
+        },
+      );
+    },
     addAccountType: async (type) =>
-      runMutation(async () => {
-        await addAccountTypeService(type);
-      }, "계정 역할이 추가되었습니다."),
+      runMutation(
+        async () => {
+          await addAccountTypeService(type);
+        },
+        "Account role added.",
+      ),
     createPlayerProfile: async (input) =>
       runMutation(
         async () => createPlayerProfileService(input),
-        "선수 프로필이 저장되었습니다.",
+        "Player profile saved.",
         () => {
           setProfileBundle((current) => ({
             ...current,
@@ -209,45 +270,52 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
               dominant_foot: input.dominantFoot,
               top_size: input.topSize || null,
               shoe_size: input.shoeSize || null,
-              skill_tier: current.playerProfile?.skill_tier ?? 0,
-              reputation_score: current.playerProfile?.reputation_score ?? 0,
+              skill_tier: current.playerProfile?.skill_tier ?? 1000,
+              reputation_score: current.playerProfile?.reputation_score ?? 100,
+              left_foot_skill: current.playerProfile?.left_foot_skill ?? 3,
+              right_foot_skill: current.playerProfile?.right_foot_skill ?? 3,
+              play_styles: current.playerProfile?.play_styles ?? [],
             },
           }));
-        }
+        },
       ),
     updatePlayerProfile: async (input) =>
       runMutation(
         async () => updatePlayerProfileService(input),
-        "선수 프로필이 수정되었습니다.",
+        "Player profile updated.",
         () => {
           setProfileBundle((current) => ({
             ...current,
             playerProfile: current.playerProfile
               ? {
                   ...current.playerProfile,
-                  preferred_position:
-                    input.preferredPosition ?? current.playerProfile.preferred_position,
+                  preferred_position: input.preferredPosition ?? current.playerProfile.preferred_position,
                   preferred_foot: input.preferredFoot ?? current.playerProfile.preferred_foot,
                   dominant_foot: input.dominantFoot ?? current.playerProfile.dominant_foot,
                   top_size: input.topSize ?? current.playerProfile.top_size,
                   shoe_size: input.shoeSize ?? current.playerProfile.shoe_size,
+                  left_foot_skill: input.leftFootSkill ?? current.playerProfile.left_foot_skill,
+                  right_foot_skill: input.rightFootSkill ?? current.playerProfile.right_foot_skill,
+                  play_styles: input.playStyles ?? current.playerProfile.play_styles,
                 }
               : current.playerProfile,
           }));
-        }
+        },
       ),
     createRefereeProfile: async () =>
       runMutation(
         async () => createRefereeProfileService(),
-        "심판 프로필이 생성되었습니다.",
+        "Referee profile created.",
         () => {
           setProfileBundle((current) => ({
             ...current,
             refereeProfile: {
               user_id: current.profile?.id ?? "",
+              average_rating: current.refereeProfile?.average_rating ?? null,
+              rating_count: current.refereeProfile?.rating_count ?? 0,
             },
           }));
-        }
+        },
       ),
   };
 }

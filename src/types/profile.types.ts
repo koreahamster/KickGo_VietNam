@@ -1,6 +1,19 @@
 ﻿export type AccountType = "player" | "referee" | "facility_manager";
 
 export type SupportedLanguage = "vi" | "ko" | "en";
+export type SupportedVisibility = "public" | "members_only" | "private";
+export type SupportedAvatarContentType = "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif";
+export type PlayStyleValue =
+  | "aggressive"
+  | "defensive"
+  | "dribbler"
+  | "build_up"
+  | "physical"
+  | "speed"
+  | "creative"
+  | "team_player"
+  | "scorer"
+  | "defender";
 
 export type CommonProfileRecord = {
   id: string;
@@ -14,6 +27,7 @@ export type CommonProfileRecord = {
   province_code: string | null;
   district_code: string | null;
   preferred_language: SupportedLanguage;
+  visibility: SupportedVisibility;
 };
 
 export type PlayerProfileRecord = {
@@ -25,10 +39,15 @@ export type PlayerProfileRecord = {
   shoe_size: string | null;
   skill_tier: number;
   reputation_score: number;
+  left_foot_skill: number;
+  right_foot_skill: number;
+  play_styles: PlayStyleValue[];
 };
 
 export type RefereeProfileRecord = {
   user_id: string;
+  average_rating: number | null;
+  rating_count: number;
 };
 
 export type ProfileBundle = {
@@ -47,6 +66,7 @@ export type CreateCommonProfileInput = {
   preferredLanguage: SupportedLanguage;
   bio: string;
   initialAccountType: AccountType;
+  visibility?: SupportedVisibility;
 };
 
 export type UpdateCommonProfileInput = {
@@ -57,6 +77,7 @@ export type UpdateCommonProfileInput = {
   districtCode?: string;
   preferredLanguage?: SupportedLanguage;
   bio?: string;
+  visibility?: SupportedVisibility;
 };
 
 export type CreatePlayerProfileInput = {
@@ -67,7 +88,31 @@ export type CreatePlayerProfileInput = {
   shoeSize: string;
 };
 
-export type UpdatePlayerProfileInput = Partial<CreatePlayerProfileInput>;
+export type UpdatePlayerProfileInput = Partial<CreatePlayerProfileInput> & {
+  leftFootSkill?: number;
+  rightFootSkill?: number;
+  playStyles?: PlayStyleValue[];
+};
+
+export type RequestAvatarUploadInput = {
+  fileName: string;
+  contentType: SupportedAvatarContentType;
+};
+
+export type UploadAvatarInput = {
+  uri: string;
+  fileName: string;
+  contentType: SupportedAvatarContentType;
+};
+
+export type RequestAvatarUploadResult = {
+  upload_url: string;
+  avatar_url: string;
+  storage_path: string;
+  file_name: string;
+};
+
+export type AvatarUploadBinary = ArrayBuffer | Uint8Array | Blob;
 
 export type ApiErrorPayload = {
   code?: string;
@@ -108,3 +153,9 @@ export type RoleProfileResult = {
 export type UpdateProfileResult = {
   profile_id: string;
 };
+
+export type UpdateProfileVisibilityResult = {
+  profile_id: string;
+  visibility: SupportedVisibility;
+};
+
