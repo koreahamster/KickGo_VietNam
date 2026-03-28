@@ -1,5 +1,7 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { saveBootstrapCache } from "@/core/lib/bootstrap-cache";
+import { bootstrapDataToProfileBundle, profileBundleToBootstrapData } from "@/core/types/bootstrap.types";
 import { getOnboardingRoute, getOnboardingStep, getPendingRoleOnboarding } from "@/lib/onboarding";
 import {
   addAccountType as addAccountTypeService,
@@ -13,6 +15,7 @@ import {
   updateProfileVisibility as updateProfileVisibilityService,
   uploadAvatar as uploadAvatarService,
 } from "@/services/profile.service";
+import { useBootstrapStore } from "@/store/bootstrap.store";
 import type {
   AccountType,
   CreateCommonProfileInput,
@@ -73,6 +76,10 @@ function isProfileExistsError(error: unknown): boolean {
   return error.message.includes("profile_exists") || error.message.includes("profile already exists");
 }
 
+function serializeProfileBundle(bundle: ProfileBundle): string {
+  return JSON.stringify(bundle);
+}
+
 const EMPTY_BUNDLE: ProfileBundle = {
   profile: null,
   accountTypes: [],
@@ -82,11 +89,23 @@ const EMPTY_BUNDLE: ProfileBundle = {
 
 export function useProfile(options?: UseProfileOptions): UseProfileResult {
   const enabled = options?.enabled ?? true;
-  const [profileBundle, setProfileBundle] = useState<ProfileBundle>(EMPTY_BUNDLE);
-  const [isProfileLoading, setIsProfileLoading] = useState<boolean>(enabled);
+  const bootstrapData = useBootstrapStore((state) => state.bootstrapData);
+  const setBootstrap = useBootstrapStore((state) => state.setBootstrap);
+  const cachedBundle = useMemo(
+    () => (bootstrapData ? bootstrapDataToProfileBundle(bootstrapData) : EMPTY_BUNDLE),
+    [bootstrapData],
+  );
+  const [profileBundle, setProfileBundle] = useState<ProfileBundle>(cachedBundle);
+  const [isProfileLoading, setIsProfileLoading] = useState<boolean>(enabled && !bootstrapData);
   const [isSubmittingProfile, setIsSubmittingProfile] = useState<boolean>(false);
   const [profileErrorMessage, setProfileErrorMessage] = useState<string | null>(null);
   const [profileStatusMessage, setProfileStatusMessage] = useState<string | null>(null);
+
+  const syncBootstrap = (nextBundle: ProfileBundle): void => {
+    const nextBootstrap = profileBundleToBootstrapData(nextBundle);
+    setBootstrap(nextBootstrap);
+    saveBootstrapCache(nextBootstrap);
+  };
 
   const loadProfileBundle = async (): Promise<ProfileBundle> => {
     if (!enabled) {
@@ -102,6 +121,7 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
       setProfileErrorMessage(null);
       const nextBundle = await getMyProfileBundle();
       setProfileBundle(nextBundle);
+      syncBootstrap(nextBundle);
       return nextBundle;
     } catch (error: unknown) {
       setProfileErrorMessage(getErrorMessage(error));
@@ -110,6 +130,22 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
       setIsProfileLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!enabled) {
+      setProfileBundle(EMPTY_BUNDLE);
+      setIsProfileLoading(false);
+      return;
+    }
+
+    if (serializeProfileBundle(profileBundle) !== serializeProfileBundle(cachedBundle)) {
+      setProfileBundle(cachedBundle);
+    }
+
+    if (bootstrapData) {
+      setIsProfileLoading(false);
+    }
+  }, [bootstrapData, cachedBundle, enabled, profileBundle]);
 
   useEffect(() => {
     void loadProfileBundle();
@@ -266,12 +302,21 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
             playerProfile: {
               user_id: current.profile?.id ?? "",
               preferred_position: input.preferredPosition,
+              position_first: input.preferredPosition,
+              position_second: current.playerProfile?.position_second ?? null,
+              position_third: current.playerProfile?.position_third ?? null,
               preferred_foot: input.preferredFoot,
               dominant_foot: input.dominantFoot,
               top_size: input.topSize || null,
               shoe_size: input.shoeSize || null,
-              skill_tier: current.playerProfile?.skill_tier ?? 1000,
-              reputation_score: current.playerProfile?.reputation_score ?? 100,
+              skill_tier: current.playerProfile?.skill_tier ?? 0,
+              reputation_score: current.playerProfile?.reputation_score ?? 0,
+              stat_stamina: current.playerProfile?.stat_stamina ?? 50,
+              stat_dribble: current.playerProfile?.stat_dribble ?? 50,
+              stat_shooting: current.playerProfile?.stat_shooting ?? 50,
+              stat_passing: current.playerProfile?.stat_passing ?? 50,
+              stat_defense: current.playerProfile?.stat_defense ?? 50,
+              stat_speed: current.playerProfile?.stat_speed ?? 50,
               left_foot_skill: current.playerProfile?.left_foot_skill ?? 3,
               right_foot_skill: current.playerProfile?.right_foot_skill ?? 3,
               play_styles: current.playerProfile?.play_styles ?? [],
@@ -289,11 +334,20 @@ export function useProfile(options?: UseProfileOptions): UseProfileResult {
             playerProfile: current.playerProfile
               ? {
                   ...current.playerProfile,
-                  preferred_position: input.preferredPosition ?? current.playerProfile.preferred_position,
+                  preferred_position: input.preferredPosition ?? input.positionFirst ?? current.playerProfile.preferred_position,
+                  position_first: input.positionFirst ?? current.playerProfile.position_first,
+                  position_second: input.positionSecond === undefined ? current.playerProfile.position_second : input.positionSecond,
+                  position_third: input.positionThird === undefined ? current.playerProfile.position_third : input.positionThird,
                   preferred_foot: input.preferredFoot ?? current.playerProfile.preferred_foot,
                   dominant_foot: input.dominantFoot ?? current.playerProfile.dominant_foot,
-                  top_size: input.topSize ?? current.playerProfile.top_size,
-                  shoe_size: input.shoeSize ?? current.playerProfile.shoe_size,
+                  top_size: input.topSize === undefined ? current.playerProfile.top_size : input.topSize,
+                  shoe_size: input.shoeSize === undefined ? current.playerProfile.shoe_size : input.shoeSize,
+                  stat_stamina: input.statStamina ?? current.playerProfile.stat_stamina,
+                  stat_dribble: input.statDribble ?? current.playerProfile.stat_dribble,
+                  stat_shooting: input.statShooting ?? current.playerProfile.stat_shooting,
+                  stat_passing: input.statPassing ?? current.playerProfile.stat_passing,
+                  stat_defense: input.statDefense ?? current.playerProfile.stat_defense,
+                  stat_speed: input.statSpeed ?? current.playerProfile.stat_speed,
                   left_foot_skill: input.leftFootSkill ?? current.playerProfile.left_foot_skill,
                   right_foot_skill: input.rightFootSkill ?? current.playerProfile.right_foot_skill,
                   play_styles: input.playStyles ?? current.playerProfile.play_styles,

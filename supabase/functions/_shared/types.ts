@@ -1,8 +1,21 @@
-﻿export type AccountType = "player" | "referee" | "facility_manager";
+export type AccountType = "player" | "referee" | "facility_manager";
 export type ConsentType = "privacy_policy" | "marketing";
 export type SupportedLanguage = "vi" | "ko" | "en";
 export type SupportedFoot = "left" | "right" | "both";
-export type SupportedPosition = "GK" | "CB" | "FB" | "DM" | "CM" | "AM" | "WG" | "ST";
+export type SupportedPosition =
+  | "GK"
+  | "CB"
+  | "LB"
+  | "RB"
+  | "CDM"
+  | "CM"
+  | "CAM"
+  | "LM"
+  | "RM"
+  | "LW"
+  | "RW"
+  | "CF"
+  | "ST";
 export type SupportedVisibility = "public" | "members_only" | "private";
 export type SupportedAvatarContentType = "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif";
 export type SupportedPlayStyle =

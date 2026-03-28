@@ -17,7 +17,7 @@ export type HomeBannerRecord = {
 export type HomeNextMatchRecord = {
   summary: TeamMatchSummaryRecord;
   membership: TeamMembershipRecord | null;
-  my_response: "yes" | "no" | "late" | "unknown" | null;
+  my_response: "yes" | "no" | "maybe" | "late" | "unknown" | null;
   active_member_count: number;
   responded_count: number;
   days_until: number;

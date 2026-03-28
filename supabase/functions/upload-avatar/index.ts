@@ -53,6 +53,30 @@ function toAbsoluteUploadUrl(relativeOrAbsoluteUrl: string): string {
   return `${getSupabaseUrl()}/storage/v1${relativeOrAbsoluteUrl}`;
 }
 
+async function removeExistingAvatarFiles(userId: string): Promise<void> {
+  const serviceClient = createServiceRoleClient();
+  const { data: existingFiles, error: listError } = await serviceClient.storage.from("avatars").list(userId);
+
+  if (listError) {
+    throw new Error(listError.message);
+  }
+
+  const removablePaths = (existingFiles ?? [])
+    .map((file) => file.name)
+    .filter((name) => typeof name === "string" && name.length > 0)
+    .map((name) => `${userId}/${name}`);
+
+  if (removablePaths.length === 0) {
+    return;
+  }
+
+  const { error: removeError } = await serviceClient.storage.from("avatars").remove(removablePaths);
+
+  if (removeError) {
+    throw new Error(removeError.message);
+  }
+}
+
 Deno.serve(async (request: Request): Promise<Response> => {
   const optionsResponse = handleOptionsRequest(request);
 
@@ -87,6 +111,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     const extension = getExtension(contentType);
+    await removeExistingAvatarFiles(user.id);
     const storagePath = `${user.id}/profile.${extension}`;
     const serviceClient = createServiceRoleClient();
 

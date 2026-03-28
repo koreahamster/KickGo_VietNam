@@ -1,4 +1,4 @@
-﻿import { createUserClient, requireUser } from "../_shared/auth.ts";
+import { createUserClient, requireUser } from "../_shared/auth.ts";
 import { errorResponse, handleOptionsRequest, parseJsonBody, successResponse } from "../_shared/http.ts";
 import {
   assertFoot,
@@ -15,7 +15,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
   }
 
   if (request.method !== "POST") {
-    return errorResponse("method_not_allowed", "POST 요청만 허용됩니다.", 405);
+    return errorResponse("method_not_allowed", "Only POST is allowed.", 405);
   }
 
   try {
@@ -41,7 +41,7 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     if (!role) {
-      return errorResponse("player_role_required", "player 역할이 먼저 필요합니다.", 400);
+      return errorResponse("player_role_required", "Player role is required first.", 400);
     }
 
     const { data: existing, error: existingError } = await client
@@ -55,33 +55,43 @@ Deno.serve(async (request: Request): Promise<Response> => {
     }
 
     if (existing) {
-      return errorResponse("player_profile_exists", "이미 선수 프로필이 존재합니다.", 409);
+      return errorResponse("player_profile_exists", "Player profile already exists.", 409);
     }
 
     const { error: insertError } = await client.from("player_profiles").insert({
       user_id: user.id,
       preferred_position: preferredPosition,
+      position_first: preferredPosition,
       preferred_foot: preferredFoot,
       dominant_foot: dominantFoot,
       top_size: topSize || null,
       shoe_size: shoeSize || null,
       skill_tier: 0,
       reputation_score: 0,
+      stat_stamina: 50,
+      stat_dribble: 50,
+      stat_shooting: 50,
+      stat_passing: 50,
+      stat_defense: 50,
+      stat_speed: 50,
     });
 
     if (insertError) {
       throw new Error(insertError.message);
     }
 
-    return successResponse({
-      user_id: user.id,
-      existed: false,
-    }, 201);
+    return successResponse(
+      {
+        user_id: user.id,
+        existed: false,
+      },
+      201,
+    );
   } catch (error: unknown) {
     return errorResponse(
       "create_player_profile_failed",
-      error instanceof Error ? error.message : "선수 프로필 생성에 실패했습니다.",
-      400
+      error instanceof Error ? error.message : "Could not create the player profile.",
+      400,
     );
   }
 });

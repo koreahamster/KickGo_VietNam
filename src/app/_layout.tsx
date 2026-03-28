@@ -4,6 +4,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { SessionTimeoutGate } from "@/components/SessionTimeoutGate";
 import { APP_HEADER_TITLE_STYLE, withAppFont } from "@/constants/typography";
+import { BootstrapInitializer } from "@/core/bootstrap/BootstrapInitializer";
 import { LanguageProvider } from "@/core/i18n/LanguageProvider";
 import { AppQueryProvider } from "@/core/query/QueryProvider";
 
@@ -31,32 +32,31 @@ export default function RootLayout(): JSX.Element {
     <LanguageProvider>
       <AppQueryProvider>
         <SafeAreaProvider>
-          <SessionTimeoutGate />
-          <Stack
-            screenOptions={{
-              headerShadowVisible: false,
-              headerTitleStyle: APP_HEADER_TITLE_STYLE,
-              contentStyle: { backgroundColor: "#f3efe6" },
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
-            <Stack.Screen name="search-result" options={{ title: "Search Result" }} />
-            <Stack.Screen name="report-modal" options={{ presentation: "modal", title: "Report" }} />
-            <Stack.Screen name="mercenary-posts" options={{ title: "Mercenary Posts" }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="(team)" options={{ headerShown: false }} />
-            <Stack.Screen name="(match)" options={{ headerShown: false }} />
-            <Stack.Screen name="(league)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tournament)" options={{ headerShown: false }} />
-            <Stack.Screen name="(facility)" options={{ headerShown: false }} />
-            <Stack.Screen name="(shop)" options={{ headerShown: false }} />
-            <Stack.Screen name="(social)" options={{ headerShown: false }} />
-            <Stack.Screen name="(referee)" options={{ headerShown: false }} />
-            <Stack.Screen name="(settings)" options={{ headerShown: false }} />
-          </Stack>
+          <BootstrapInitializer>
+            <SessionTimeoutGate />
+            <Stack
+              screenOptions={{
+                headerShadowVisible: false,
+                headerTitleStyle: APP_HEADER_TITLE_STYLE,
+                contentStyle: { backgroundColor: "#f3efe6" },
+              }}
+            >
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
+              <Stack.Screen name="search-result" options={{ title: "Search Result" }} />
+              <Stack.Screen name="report-modal" options={{ presentation: "modal", title: "Report" }} />              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="(match)" options={{ headerShown: false }} />
+              <Stack.Screen name="(league)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tournament)" options={{ headerShown: false }} />
+              <Stack.Screen name="(facility)" options={{ headerShown: false }} />
+              <Stack.Screen name="(shop)" options={{ headerShown: false }} />
+              <Stack.Screen name="(social)" options={{ headerShown: false }} />
+              <Stack.Screen name="(referee)" options={{ headerShown: false }} />
+              <Stack.Screen name="(settings)" options={{ headerShown: false }} />
+            </Stack>
+          </BootstrapInitializer>
         </SafeAreaProvider>
       </AppQueryProvider>
     </LanguageProvider>

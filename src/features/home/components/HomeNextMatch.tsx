@@ -28,7 +28,7 @@ function getDdayLabel(daysUntil: number, copy: HomeCopy): string {
   return `D-${daysUntil}`;
 }
 
-function getResponsePill(copy: HomeCopy, response: "yes" | "no" | "late" | "unknown" | null): {
+function getResponsePill(copy: HomeCopy, response: "yes" | "no" | "maybe" | "late" | "unknown" | null): {
   label: string;
   backgroundColor: string;
   color: string;
@@ -86,7 +86,7 @@ export function HomeNextMatch(props: HomeNextMatchProps): JSX.Element | null {
   }
 
   const responsePill = getResponsePill(copy, nextMatch.my_response);
-  const attendanceLabel = `${nextMatch.responded_count} / ${nextMatch.active_member_count}${language === "en" ? " responded" : language === "vi" ? " người" : "명"}`;
+  const attendanceLabel = `${nextMatch.responded_count} / ${nextMatch.active_member_count} responded`;
 
   return (
     <View style={styles.section}>

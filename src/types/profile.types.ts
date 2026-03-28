@@ -1,8 +1,9 @@
-﻿export type AccountType = "player" | "referee" | "facility_manager";
+export type AccountType = "player" | "referee" | "facility_manager";
 
 export type SupportedLanguage = "vi" | "ko" | "en";
 export type SupportedVisibility = "public" | "members_only" | "private";
 export type SupportedAvatarContentType = "image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif";
+export type PlayerPosition = "GK" | "CB" | "LB" | "RB" | "CDM" | "CM" | "CAM" | "LM" | "RM" | "LW" | "RW" | "CF" | "ST";
 export type PlayStyleValue =
   | "aggressive"
   | "defensive"
@@ -32,13 +33,22 @@ export type CommonProfileRecord = {
 
 export type PlayerProfileRecord = {
   user_id: string;
-  preferred_position: string | null;
+  preferred_position: PlayerPosition | null;
+  position_first: PlayerPosition | null;
+  position_second: PlayerPosition | null;
+  position_third: PlayerPosition | null;
   preferred_foot: string | null;
   dominant_foot: string | null;
   top_size: string | null;
   shoe_size: string | null;
   skill_tier: number;
   reputation_score: number;
+  stat_stamina: number;
+  stat_dribble: number;
+  stat_shooting: number;
+  stat_passing: number;
+  stat_defense: number;
+  stat_speed: number;
   left_foot_skill: number;
   right_foot_skill: number;
   play_styles: PlayStyleValue[];
@@ -81,18 +91,34 @@ export type UpdateCommonProfileInput = {
 };
 
 export type CreatePlayerProfileInput = {
-  preferredPosition: string;
+  preferredPosition: PlayerPosition;
   preferredFoot: string;
   dominantFoot: string;
   topSize: string;
   shoeSize: string;
 };
 
-export type UpdatePlayerProfileInput = Partial<CreatePlayerProfileInput> & {
+export type UpdatePlayerProfileInput = {
+  preferredPosition?: PlayerPosition;
+  positionFirst?: PlayerPosition | null;
+  positionSecond?: PlayerPosition | null;
+  positionThird?: PlayerPosition | null;
+  preferredFoot?: string;
+  dominantFoot?: string;
+  topSize?: string | null;
+  shoeSize?: string | null;
+  statStamina?: number;
+  statDribble?: number;
+  statShooting?: number;
+  statPassing?: number;
+  statDefense?: number;
+  statSpeed?: number;
   leftFootSkill?: number;
   rightFootSkill?: number;
   playStyles?: PlayStyleValue[];
 };
+
+export type UpdatePlayerProfileRequest = UpdatePlayerProfileInput;
 
 export type RequestAvatarUploadInput = {
   fileName: string;
@@ -158,4 +184,3 @@ export type UpdateProfileVisibilityResult = {
   profile_id: string;
   visibility: SupportedVisibility;
 };
-

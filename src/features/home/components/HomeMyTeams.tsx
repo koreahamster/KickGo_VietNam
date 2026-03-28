@@ -49,7 +49,7 @@ export function HomeMyTeams(props: HomeMyTeamsProps): JSX.Element | null {
     return (
       <View style={styles.section}>
         <HomeSectionHeader title={copy.myTeams} />
-        <HomeTeamOnboardingCard copy={copy} onCreateTeam={() => router.push("/(team)/create")} onJoinTeam={() => router.push("/(team)/join")} />
+        <HomeTeamOnboardingCard copy={copy} onCreateTeam={() => router.push("/(tabs)/team/create")} onJoinTeam={() => router.push("/(tabs)/team/join")} />
       </View>
     );
   }
@@ -67,7 +67,7 @@ export function HomeMyTeams(props: HomeMyTeamsProps): JSX.Element | null {
         renderItem={({ item }) => {
           if (!item) {
             return (
-              <Pressable style={styles.addChip} onPress={() => router.push("/(team)/create")}>
+              <Pressable style={styles.addChip} onPress={() => router.push("/(tabs)/team/create")}>
                 <Ionicons color="#1d9e75" name="add" size={24} />
                 <Text style={styles.addChipLabel}>{copy.teamAdded}</Text>
               </Pressable>
@@ -77,7 +77,7 @@ export function HomeMyTeams(props: HomeMyTeamsProps): JSX.Element | null {
           return (
             <Pressable
               style={styles.teamChip}
-              onPress={() => router.push({ pathname: "/(team)/[teamId]", params: { teamId: item.team.id } })}
+              onPress={() => router.push({ pathname: "/(tabs)/team/[teamId]", params: { teamId: item.team.id } })}
             >
               <View style={styles.emblemFallback}>
                 <Text style={styles.emblemFallbackLabel}>{item.team.name.slice(0, 1).toUpperCase()}</Text>

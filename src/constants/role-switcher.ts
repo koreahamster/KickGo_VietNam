@@ -1,6 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 
-import type { SupportedLanguage } from "@/types/profile.types";
+import type { SupportedLanguage, AccountType } from "@/types/profile.types";
 import type { ActiveRole } from "@/store/role-switch.store";
 
 export type RoleTabRoute =
@@ -33,56 +33,59 @@ type RoleSwitcherCopy = {
   logout: string;
   loadingProfile: string;
   guestName: string;
+  noRole: string;
 };
 
-const ROLE_LABELS: Record<SupportedLanguage, Record<ActiveRole, string>> = {
+const ROLE_LABELS: Record<SupportedLanguage, Record<AccountType, string>> = {
   ko: {
-    player: "선수 모드",
-    referee: "심판 모드",
-    facility_manager: "시설 관리자 모드",
+    player: "\uc120\uc218",
+    referee: "\uc2ec\ud310",
+    facility_manager: "\uc2dc\uc124 \uad00\ub9ac\uc790",
   },
   vi: {
-    player: "Chế độ cầu thủ",
-    referee: "Chế độ trọng tài",
-    facility_manager: "Chế độ quản lý sân",
+    player: "Cau thu",
+    referee: "Trong tai",
+    facility_manager: "Quan ly san",
   },
   en: {
-    player: "Player Mode",
-    referee: "Referee Mode",
-    facility_manager: "Facility Manager Mode",
+    player: "Player",
+    referee: "Referee",
+    facility_manager: "Facility Manager",
   },
 };
 
 const ROLE_SWITCHER_COPY: Record<SupportedLanguage, RoleSwitcherCopy> = {
   ko: {
-    title: "역할 전환",
-    currentRole: "현재 활성 역할",
-    roleSectionTitle: "역할",
-    addRole: "역할 추가",
-    menuSectionTitle: "메뉴",
-    notifications: "알림",
-    language: "언어 설정",
-    privacyPolicy: "개인정보처리방침",
-    logout: "로그아웃",
-    loadingProfile: "프로필을 불러오는 중입니다.",
-    guestName: "KickGo 사용자",
+    title: "\uc5ed\ud560 \uc804\ud658",
+    currentRole: "\ud604\uc7ac \uc5ed\ud560",
+    roleSectionTitle: "\uc5ed\ud560",
+    addRole: "\uc5ed\ud560 \ucd94\uac00",
+    menuSectionTitle: "\uba54\ub274",
+    notifications: "\uc54c\ub9bc",
+    language: "\uc5b8\uc5b4 \uc124\uc815",
+    privacyPolicy: "\uac1c\uc778\uc815\ubcf4\ucc98\ub9ac\ubc29\uce68",
+    logout: "\ub85c\uadf8\uc544\uc6c3",
+    loadingProfile: "\ud504\ub85c\ud544\uc744 \ubd88\ub7ec\uc624\ub294 \uc911\uc785\ub2c8\ub2e4.",
+    guestName: "KickGo \uc0ac\uc6a9\uc790",
+    noRole: "\uc120\ud0dd\ub41c \uc5ed\ud560 \uc5c6\uc74c",
   },
   vi: {
-    title: "Chuyển vai trò",
-    currentRole: "Vai trò hiện tại",
-    roleSectionTitle: "Vai trò",
-    addRole: "Thêm vai trò",
+    title: "Chuyen vai tro",
+    currentRole: "Vai tro hien tai",
+    roleSectionTitle: "Vai tro",
+    addRole: "Them vai tro",
     menuSectionTitle: "Menu",
-    notifications: "Thông báo",
-    language: "Ngôn ngữ",
-    privacyPolicy: "Chính sách riêng tư",
-    logout: "Đăng xuất",
-    loadingProfile: "Đang tải hồ sơ.",
-    guestName: "Người dùng KickGo",
+    notifications: "Thong bao",
+    language: "Ngon ngu",
+    privacyPolicy: "Chinh sach rieng tu",
+    logout: "Dang xuat",
+    loadingProfile: "Dang tai ho so.",
+    guestName: "Nguoi dung KickGo",
+    noRole: "Chua co vai tro",
   },
   en: {
     title: "Role Switcher",
-    currentRole: "Current active role",
+    currentRole: "Current role",
     roleSectionTitle: "Roles",
     addRole: "Add role",
     menuSectionTitle: "Menu",
@@ -92,38 +95,35 @@ const ROLE_SWITCHER_COPY: Record<SupportedLanguage, RoleSwitcherCopy> = {
     logout: "Logout",
     loadingProfile: "Loading profile.",
     guestName: "KickGo User",
+    noRole: "No role selected",
   },
 };
 
-const ROLE_TABS: Record<ActiveRole, RoleTabDefinition[]> = {
+const GUEST_TABS: RoleTabDefinition[] = [
+  { name: "home", icon: "home-outline", labels: { ko: "\ud648", vi: "Trang chu", en: "Home" } },
+];
+
+const ROLE_TABS: Record<AccountType, RoleTabDefinition[]> = {
   player: [
-    { name: "home", icon: "home-outline", labels: { ko: "홈", vi: "Trang chủ", en: "Home" } },
-    { name: "team", icon: "shield-outline", labels: { ko: "팀", vi: "Đội", en: "Team" } },
-    { name: "social", icon: "images-outline", labels: { ko: "소셜", vi: "Social", en: "Social" } },
-    { name: "search", icon: "search-outline", labels: { ko: "탐색", vi: "Khám phá", en: "Explore" } },
-    { name: "profile", icon: "person-outline", labels: { ko: "프로필", vi: "Hồ sơ", en: "Profile" } },
+    { name: "home", icon: "home-outline", labels: { ko: "\ud648", vi: "Trang chu", en: "Home" } },
+    { name: "team", icon: "shield-outline", labels: { ko: "\ud300", vi: "Doi", en: "Team" } },
+    { name: "social", icon: "images-outline", labels: { ko: "\uc18c\uc15c", vi: "Social", en: "Social" } },
+    { name: "search", icon: "search-outline", labels: { ko: "\ud0d0\uc0c9", vi: "Kham pha", en: "Explore" } },
+    { name: "profile", icon: "person-outline", labels: { ko: "\ud504\ub85c\ud544", vi: "Ho so", en: "Profile" } },
   ],
   referee: [
-    { name: "home", icon: "home-outline", labels: { ko: "홈", vi: "Trang chủ", en: "Home" } },
-    { name: "schedule", icon: "calendar-outline", labels: { ko: "일정", vi: "Lịch", en: "Schedule" } },
-    { name: "match-control", icon: "stopwatch-outline", labels: { ko: "경기진행", vi: "Điều hành", en: "Match" } },
-    { name: "revenue", icon: "wallet-outline", labels: { ko: "수익", vi: "Thu nhập", en: "Revenue" } },
-    { name: "profile", icon: "person-outline", labels: { ko: "프로필", vi: "Hồ sơ", en: "Profile" } },
+    { name: "home", icon: "home-outline", labels: { ko: "\ud648", vi: "Trang chu", en: "Home" } },
+    { name: "schedule", icon: "calendar-outline", labels: { ko: "\uc77c\uc815", vi: "Lich", en: "Schedule" } },
+    { name: "match-control", icon: "stopwatch-outline", labels: { ko: "\uacbd\uae30\uc9c4\ud589", vi: "Tran dau", en: "Match" } },
+    { name: "revenue", icon: "wallet-outline", labels: { ko: "\uc218\uc775", vi: "Thu nhap", en: "Revenue" } },
+    { name: "profile", icon: "person-outline", labels: { ko: "\ud504\ub85c\ud544", vi: "Ho so", en: "Profile" } },
   ],
   facility_manager: [
-    { name: "home", icon: "home-outline", labels: { ko: "홈", vi: "Trang chủ", en: "Home" } },
-    {
-      name: "booking-management",
-      icon: "calendar-clear-outline",
-      labels: { ko: "예약관리", vi: "Quản lý đặt sân", en: "Bookings" },
-    },
-    {
-      name: "facility-management",
-      icon: "business-outline",
-      labels: { ko: "운동장관리", vi: "Quản lý sân", en: "Facilities" },
-    },
-    { name: "revenue", icon: "wallet-outline", labels: { ko: "수익", vi: "Thu nhập", en: "Revenue" } },
-    { name: "profile", icon: "person-outline", labels: { ko: "프로필", vi: "Hồ sơ", en: "Profile" } },
+    { name: "home", icon: "home-outline", labels: { ko: "\ud648", vi: "Trang chu", en: "Home" } },
+    { name: "booking-management", icon: "calendar-clear-outline", labels: { ko: "\uc608\uc57d\uad00\ub9ac", vi: "Dat cho", en: "Bookings" } },
+    { name: "facility-management", icon: "business-outline", labels: { ko: "\uc6b4\ub3d9\uc7a5\uad00\ub9ac", vi: "Quan ly san", en: "Facilities" } },
+    { name: "revenue", icon: "wallet-outline", labels: { ko: "\uc218\uc775", vi: "Doanh thu", en: "Revenue" } },
+    { name: "profile", icon: "person-outline", labels: { ko: "\ud504\ub85c\ud544", vi: "Ho so", en: "Profile" } },
   ],
 };
 
@@ -140,7 +140,7 @@ export const ALL_ROLE_TAB_ROUTES: RoleTabRoute[] = [
   "facility-management",
 ];
 
-export function getRoleLabel(language: SupportedLanguage, role: ActiveRole): string {
+export function getRoleLabel(language: SupportedLanguage, role: AccountType): string {
   return ROLE_LABELS[language][role];
 }
 
@@ -149,7 +149,9 @@ export function getRoleSwitcherCopy(language: SupportedLanguage): RoleSwitcherCo
 }
 
 export function getRoleTabs(language: SupportedLanguage, role: ActiveRole): Array<RoleTabDefinition & { label: string }> {
-  return ROLE_TABS[role].map((tab) => ({
+  const tabs = role ? ROLE_TABS[role] : GUEST_TABS;
+
+  return tabs.map((tab) => ({
     ...tab,
     label: tab.labels[language],
   }));

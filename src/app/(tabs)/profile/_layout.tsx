@@ -1,10 +1,11 @@
 import { Stack } from "expo-router";
 
 import { useI18n } from "@/core/i18n/LanguageProvider";
+import { getMercenaryCopy } from "@/features/mercenary/mercenary.copy";
 
 const TITLES = {
   ko: {
-    playStyle: "\uD50C\uB808\uC774 \uC2A4\uD0C0\uC77C",
+    playStyle: "플레이 스타일",
   },
   vi: {
     playStyle: "Phong cach choi",
@@ -16,6 +17,7 @@ const TITLES = {
 
 export default function ProfileStackLayout(): JSX.Element {
   const { language } = useI18n();
+  const mercenaryCopy = getMercenaryCopy(language);
 
   return (
     <Stack>
@@ -27,6 +29,15 @@ export default function ProfileStackLayout(): JSX.Element {
           headerShadowVisible: false,
         }}
       />
+      <Stack.Screen
+        name="applications"
+        options={{
+          title: mercenaryCopy.myApplicationsTitle,
+          headerShadowVisible: false,
+        }}
+      />
+      <Stack.Screen name="referee-availability" options={{ headerShown: false }} />
+      <Stack.Screen name="referee-assignments" options={{ headerShown: false }} />
     </Stack>
   );
 }

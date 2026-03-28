@@ -5,7 +5,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useI18n } from "@/core/i18n/LanguageProvider";
 import { HomeBannerSlider } from "@/features/home/components/HomeBannerSlider";
-import { HomeHeader } from "@/features/home/components/HomeHeader";
 import { HomeMyTeams } from "@/features/home/components/HomeMyTeams";
 import { HomeNextMatch } from "@/features/home/components/HomeNextMatch";
 import { HomePendingActions } from "@/features/home/components/HomePendingActions";
@@ -16,8 +15,8 @@ import { HomeRegionRank } from "@/features/home/components/HomeRegionRank";
 import { HomeSectionSkeleton } from "@/features/home/components/HomeSectionSkeleton";
 import { getHomeCopy } from "@/features/home/home-copy";
 import { useAuth } from "@/hooks/useAuth";
-import { usePendingActions } from "@/hooks/home/usePendingActions";
 import { useOnboardingStatus } from "@/hooks/useOnboardingStatus";
+import { usePendingActions } from "@/hooks/home/usePendingActions";
 import { useProfile } from "@/hooks/useProfile";
 
 function HomeGateCard(props: {
@@ -65,13 +64,11 @@ export default function HomeScreen(): JSX.Element {
     (auth.isAuthenticated && profile.hasProfile && onboarding.isLoading);
 
   const isProfileReady = auth.isAuthenticated && profile.hasProfile && onboarding.isOnboardingComplete;
-  const pendingActionsQuery = usePendingActions(userId, isProfileReady);
-  const notificationCount = pendingActionsQuery.data?.length ?? 0;
+  usePendingActions(userId, isProfileReady);
   const onboardingCTA = onboarding.onboardingCTA;
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <HomeHeader copy={copy} notificationCount={notificationCount} onOpenNotifications={() => router.push("/notifications")} />
+    <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <HomeBannerSlider copy={copy} />
         <HomeQuickActions copy={copy} />
@@ -104,7 +101,7 @@ export default function HomeScreen(): JSX.Element {
             secondaryLabel={copy.notifications}
             onSecondaryPress={() => router.push("/(settings)/settings")}
           />
-         ) : onboardingCTA ? (
+        ) : onboardingCTA ? (
           <HomeGateCard
             title={onboardingCTA.title}
             body={onboardingCTA.description}
@@ -187,5 +184,3 @@ const styles = StyleSheet.create({
     color: "#b91c1c",
   },
 });
-
-

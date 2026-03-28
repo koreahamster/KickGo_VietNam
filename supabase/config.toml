@@ -70,5 +70,80 @@ verify_jwt = false
 [functions.create-match]
 verify_jwt = false
 
+[functions.vote-attendance]
+verify_jwt = false
+
 [functions.upload-team-asset]
+verify_jwt = false
+
+[functions.update-team-member-role]
+verify_jwt = false
+
+[functions.kick-team-member]
+verify_jwt = false
+
+[functions.create-team-announcement]
+verify_jwt = false
+
+[functions.toggle-announcement-pin]
+verify_jwt = false
+
+[functions.update-team]
+verify_jwt = false
+
+[functions.update-team-recruitment-status]
+verify_jwt = false
+
+[functions.respond-team-recruitment-application]
+verify_jwt = false
+
+[functions.update-fee-settings]
+verify_jwt = false
+
+[functions.register-payment-account]
+verify_jwt = false
+
+[functions.confirm-fee-payment]
+verify_jwt = false
+
+[functions.record-fee-usage]
+verify_jwt = false
+
+[functions.upload-fee-qr]
+verify_jwt = false
+
+[functions.create-tournament]
+verify_jwt = false
+
+[functions.create-mercenary-post]
+verify_jwt = false
+
+[functions.apply-mercenary]
+verify_jwt = false
+
+[functions.respond-mercenary-application]
+verify_jwt = false
+
+[functions.close-mercenary-post]
+verify_jwt = false
+
+[functions.register-referee-availability]
+verify_jwt = false
+
+[functions.request-referee-assignment]
+verify_jwt = false
+
+[functions.respond-referee-assignment]
+verify_jwt = false
+
+[functions.submit-match-roster]
+verify_jwt = false
+
+[functions.confirm-match-roster]
+verify_jwt = false
+
+[functions.record-referee-payment]
+verify_jwt = false
+
+[functions.rate-referee]
 verify_jwt = false

@@ -16,7 +16,7 @@ const SUPPORTED_LANGUAGES = ["vi", "ko", "en"] as const;
 const ACCOUNT_TYPES = ["player", "referee", "facility_manager"] as const;
 const CONSENT_TYPES = ["privacy_policy", "marketing"] as const;
 const SUPPORTED_FEET = ["left", "right", "both"] as const;
-const SUPPORTED_POSITIONS = ["GK", "CB", "FB", "DM", "CM", "AM", "WG", "ST"] as const;
+const SUPPORTED_POSITIONS = ["GK", "CB", "LB", "RB", "CDM", "CM", "CAM", "LM", "RM", "LW", "RW", "CF", "ST"] as const;
 const SUPPORTED_VISIBILITY = ["public", "members_only", "private"] as const;
 const SUPPORTED_PLAY_STYLES = [
   "aggressive",
@@ -189,6 +189,14 @@ export function readOptionalStringArray(body: Record<string, unknown>, key: stri
 export function assertFootSkill(value: number): number {
   if (!Number.isInteger(value) || value < 1 || value > 5) {
     throw new Error("Foot skill must be an integer between 1 and 5.");
+  }
+
+  return value;
+}
+
+export function assertStatValue(value: number, fieldName: string): number {
+  if (!Number.isInteger(value) || value < 0 || value > 100) {
+    throw new Error(`${fieldName} must be an integer between 0 and 100.`);
   }
 
   return value;

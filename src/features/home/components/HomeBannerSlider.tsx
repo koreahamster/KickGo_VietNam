@@ -18,6 +18,7 @@ export function HomeBannerSlider(props: HomeBannerSliderProps): JSX.Element {
   const bannerQuery = useBanners();
   const { width } = useWindowDimensions();
   const scrollRef = useRef<ScrollView | null>(null);
+  const isUserInteractingRef = useRef(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const banners = bannerQuery.data ?? [];
 
@@ -27,6 +28,10 @@ export function HomeBannerSlider(props: HomeBannerSliderProps): JSX.Element {
     }
 
     const timer = setInterval(() => {
+      if (isUserInteractingRef.current) {
+        return;
+      }
+
       setCurrentIndex((previous) => {
         const next = (previous + 1) % banners.length;
         scrollRef.current?.scrollTo({ x: next * width, animated: true });
@@ -71,9 +76,22 @@ export function HomeBannerSlider(props: HomeBannerSliderProps): JSX.Element {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onScrollBeginDrag={() => {
+          isUserInteractingRef.current = true;
+        }}
+        onScrollEndDrag={() => {
+          isUserInteractingRef.current = false;
+        }}
         onMomentumScrollEnd={(event) => {
           const index = Math.round(event.nativeEvent.contentOffset.x / width);
           setCurrentIndex(index);
+          isUserInteractingRef.current = false;
+        }}
+        onTouchStart={() => {
+          isUserInteractingRef.current = true;
+        }}
+        onTouchEnd={() => {
+          isUserInteractingRef.current = false;
         }}
       >
         {banners.map((banner) => (

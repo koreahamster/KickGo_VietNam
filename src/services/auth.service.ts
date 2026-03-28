@@ -70,12 +70,9 @@ function parseSessionTokens(url: string): SessionTokens | null {
 }
 
 export async function recoverSessionFromUrl(url: string): Promise<Session | null> {
-  console.log("[auth] recoverSessionFromUrl", url);
-
   const sessionTokens = parseSessionTokens(url);
 
   if (!sessionTokens) {
-    console.log("[auth] session tokens not found in callback URL");
     return null;
   }
 
@@ -88,8 +85,6 @@ export async function recoverSessionFromUrl(url: string): Promise<Session | null
     throw new Error(error.message);
   }
 
-  console.log("[auth] session restored", Boolean(data.session));
-
   return data.session;
 }
 
@@ -97,8 +92,6 @@ export async function signInWithGoogle(): Promise<Session | null> {
   assertSupportedOAuthEnvironment();
 
   const redirectTo = buildRedirectUrl();
-  console.log("[auth] executionEnvironment", Constants.executionEnvironment);
-  console.log("[auth] redirectTo", redirectTo);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -116,11 +109,7 @@ export async function signInWithGoogle(): Promise<Session | null> {
     throw new Error("Google sign-in URL could not be created.");
   }
 
-  console.log("[auth] oauthUrl", data.url);
-
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-  console.log("[auth] authResult", JSON.stringify(result));
-
   if (result.type !== "success") {
     return null;
   }
@@ -145,8 +134,6 @@ export async function signInWithEmail(
     throw new Error("이메일 로그인 세션을 만들 수 없습니다.");
   }
 
-  console.log("[auth] email sign-in success", Boolean(data.session));
-
   return data.session;
 }
 
@@ -166,8 +153,6 @@ export async function signUpWithEmail(
   if (data.user?.identities?.length === 0) {
     throw new Error("이미 가입된 이메일입니다. 로그인으로 진행하세요.");
   }
-
-  console.log("[auth] email sign-up success", Boolean(data.session));
 
   if (data.session) {
     return {
@@ -189,8 +174,6 @@ export async function getCurrentSession(): Promise<Session | null> {
     throw new Error(error.message);
   }
 
-  console.log("[auth] current session", Boolean(data.session));
-
   return data.session;
 }
 
@@ -200,7 +183,6 @@ export function subscribeToAuthStateChange(
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((event, session) => {
-    console.log("[auth] onAuthStateChange", event, Boolean(session));
     callback(event, session);
   });
 
@@ -214,5 +196,4 @@ export async function signOut(): Promise<void> {
     throw new Error(error.message);
   }
 
-  console.log("[auth] signed out");
 }

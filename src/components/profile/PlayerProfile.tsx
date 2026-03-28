@@ -1,5 +1,5 @@
-﻿import * as ImagePicker from "expo-image-picker";
-import { FontAwesome5, Feather, Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -9,187 +9,165 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ProfileHeroHeader } from "@/components/profile/ProfileHeroHeader";
+import {
+  PROFILE_BLUE,
+  PROFILE_BLUE_SOFT,
+  PROFILE_BORDER,
+  PROFILE_CARD_BG,
+  PROFILE_GREEN,
+  PROFILE_OWNER_BG,
+  PROFILE_OWNER_TEXT,
+  PROFILE_PAGE_BG,
+  PROFILE_TEXT_DARK,
+  PROFILE_TEXT_SOFT,
+  getAvatarContentType,
+  getAvatarFileName,
+  getInitials,
+} from "@/components/profile/profileShared";
 import {
   FOOT_SKILL_VALUES,
   getPlayStyleLabels,
   getPlayerProfileSectionCopy,
   getPreferredFootLabel,
 } from "@/constants/player-profile-sections";
-import { getCountryFlag, getCountryLabel, getAgeBandLabel, getProfileDashboardCopy, getRoleBadgeLabel, getStatusBadgeLabel, getTierDisplay, buildRadarValues } from "@/constants/profile-dashboard";
 import { useI18n } from "@/core/i18n/LanguageProvider";
+import {
+  buildRadarMetrics,
+  getAgeBandLabel,
+  getCountryFlag,
+  getCountryLabel,
+  getPlayerProfileCopy,
+  getPositionOptions,
+  getPrimaryRoleLabel,
+  getRoleBadgeLabel,
+  getStatusBadgeLabel,
+  getTierDisplay,
+} from "@/features/profile/player-profile.copy";
 import { useAuth } from "@/hooks/useAuth";
 import { usePlayerProfileDashboard } from "@/hooks/usePlayerProfileDashboard";
-import { ProfileRadarChart, type RadarMetric } from "@/shared/components/ProfileRadarChart";
-import type { SupportedAvatarContentType, SupportedLanguage } from "@/types/profile.types";
+import { ProfileRadarChart } from "@/shared/components/ProfileRadarChart";
+import { MyMercenaryApplicationsPreview } from "@/features/mercenary/components/MyMercenaryApplicationsPreview";
+import type { PlayerPosition, PlayerProfileRecord, SupportedAvatarContentType } from "@/types/profile.types";
+import type { TeamMembershipRecord } from "@/types/team.types";
 
-const HEADER_BG = "#161827";
-const HEADER_MUTED = "#8d92ae";
-const TAG_BG = "#262a3d";
-const CARD_BG = "#ffffff";
-const PAGE_BG = "#eff1f7";
-const BORDER = "#e7e9f0";
-const TEXT_DARK = "#111827";
-const TEXT_SOFT = "#6b7280";
-const OWNER_BG = "#fde68a";
-const OWNER_TEXT = "#92400e";
-const BLUE = "#3b82f6";
-const RED = "#ff2d55";
-const BLUE_SOFT = "#dbeafe";
+type PositionRank = "first" | "second" | "third";
+type StatKey = "stamina" | "dribble" | "shooting" | "passing" | "defense" | "speed";
+type StatsDraft = Record<StatKey, number>;
+type PositionDraft = Record<PositionRank, PlayerPosition | null>;
+
 const MODAL_BACKDROP = "rgba(15, 23, 42, 0.42)";
+const SEGMENT_VALUES = Array.from({ length: 21 }, (_, index) => index * 5);
 
-type MetricRow = {
-  key: string;
+function clampStat(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 50;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function createStatsDraft(playerProfile: PlayerProfileRecord | null): StatsDraft {
+  return {
+    stamina: playerProfile?.stat_stamina ?? 50,
+    dribble: playerProfile?.stat_dribble ?? 50,
+    shooting: playerProfile?.stat_shooting ?? 50,
+    passing: playerProfile?.stat_passing ?? 50,
+    defense: playerProfile?.stat_defense ?? 50,
+    speed: playerProfile?.stat_speed ?? 50,
+  };
+}
+
+function createPositionDraft(playerProfile: PlayerProfileRecord | null): PositionDraft {
+  return {
+    first: playerProfile?.position_first ?? playerProfile?.preferred_position ?? null,
+    second: playerProfile?.position_second ?? null,
+    third: playerProfile?.position_third ?? null,
+  };
+}
+
+function PositionRow(props: { label: string; value: string; onPress: () => void }): JSX.Element {
+  return (
+    <Pressable onPress={props.onPress} style={styles.positionRow}>
+      <Text style={styles.positionRankLabel}>{props.label}</Text>
+      <View style={styles.positionValueWrap}>
+        <Text style={styles.positionValue}>{props.value}</Text>
+        <Ionicons color={PROFILE_TEXT_SOFT} name="chevron-forward" size={18} />
+      </View>
+    </Pressable>
+  );
+}
+
+function TeamMembershipCard(props: { membership: TeamMembershipRecord; roleLabel: string }): JSX.Element {
+  const { membership, roleLabel } = props;
+  const emblemUrl = membership.team.emblem_url;
+  const teamName = membership.team.name;
+  const regionLabel = `${membership.team.province_code} / ${membership.team.district_code}`;
+
+  return (
+    <Pressable onPress={() => router.push(`/(tabs)/team/${membership.team.id}`)} style={styles.teamCard}>
+      <View style={styles.teamCardLeft}>
+        {emblemUrl ? (
+          <Image source={{ uri: emblemUrl }} style={styles.teamEmblem} />
+        ) : (
+          <View style={styles.teamEmblemFallback}>
+            <Text style={styles.teamEmblemFallbackLabel}>{getInitials(teamName).slice(0, 1)}</Text>
+          </View>
+        )}
+        <View style={styles.teamCopyWrap}>
+          <Text numberOfLines={1} style={styles.teamNameLabel}>{teamName}</Text>
+          <Text numberOfLines={1} style={styles.teamSubLabel}>{regionLabel}</Text>
+        </View>
+      </View>
+      <View style={styles.teamRolePill}>
+        <Text style={styles.teamRolePillLabel}>{roleLabel}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function StatEditorRow(props: {
   label: string;
   value: number;
-};
+  onDecrease: () => void;
+  onIncrease: () => void;
+  onSelect: (value: number) => void;
+}): JSX.Element {
+  return (
+    <View style={styles.statEditorRow}>
+      <View style={styles.statEditorHeader}>
+        <Text style={styles.statEditorLabel}>{props.label}</Text>
+        <Text style={styles.statEditorValue}>{props.value}</Text>
+      </View>
+      <View style={styles.statEditorControls}>
+        <Pressable onPress={props.onDecrease} style={styles.statAdjustButton}>
+          <Feather color={PROFILE_TEXT_DARK} name="minus" size={16} />
+        </Pressable>
+        <View style={styles.statSegmentsWrap}>
+          {SEGMENT_VALUES.map((segmentValue) => {
+            const active = props.value >= segmentValue;
+            return (
 
-const METRIC_LABELS: Record<SupportedLanguage, Omit<Record<keyof ReturnType<typeof buildRadarValues>, string>, never>> = {
-  ko: {
-    stamina: "\uCCB4\uB825",
-    dribble: "\uB4DC\uB9AC\uBE14",
-    shooting: "\uC288\uD305",
-    speed: "\uC2A4\uD53C\uB4DC",
-    defense: "\uC218\uBE44",
-    pass: "\uD328\uC2A4",
-  },
-  vi: {
-    stamina: "The luc",
-    dribble: "Di bong",
-    shooting: "Sut",
-    speed: "Toc do",
-    defense: "Phong ngu",
-    pass: "Chuyen bong",
-  },
-  en: {
-    stamina: "Stamina",
-    dribble: "Dribble",
-    shooting: "Shooting",
-    speed: "Speed",
-    defense: "Defense",
-    pass: "Pass",
-  },
-};
-
-const ROLE_LABELS: Record<SupportedLanguage, Record<string, string>> = {
-  ko: {
-    player: "\uC120\uC218",
-    referee: "\uC2EC\uD310",
-    facility_manager: "\uAD00\uB9AC\uC790",
-  },
-  vi: {
-    player: "Cau thu",
-    referee: "Trong tai",
-    facility_manager: "Quan ly",
-  },
-  en: {
-    player: "Player",
-    referee: "Referee",
-    facility_manager: "Manager",
-  },
-};
-
-function getAvatarContentType(asset: ImagePicker.ImagePickerAsset): SupportedAvatarContentType | null {
-  const mimeType = asset.mimeType?.toLowerCase();
-
-  if (
-    mimeType === "image/jpeg" ||
-    mimeType === "image/png" ||
-    mimeType === "image/webp" ||
-    mimeType === "image/heic" ||
-    mimeType === "image/heif"
-  ) {
-    return mimeType;
-  }
-
-  const sourceName = (asset.fileName ?? asset.uri).toLowerCase();
-
-  if (sourceName.endsWith(".jpg") || sourceName.endsWith(".jpeg")) {
-    return "image/jpeg";
-  }
-
-  if (sourceName.endsWith(".png")) {
-    return "image/png";
-  }
-
-  if (sourceName.endsWith(".webp")) {
-    return "image/webp";
-  }
-
-  if (sourceName.endsWith(".heic")) {
-    return "image/heic";
-  }
-
-  if (sourceName.endsWith(".heif")) {
-    return "image/heif";
-  }
-
-  return null;
-}
-
-function getAvatarFileName(asset: ImagePicker.ImagePickerAsset, contentType: SupportedAvatarContentType): string {
-  if (asset.fileName) {
-    return asset.fileName;
-  }
-
-  if (contentType === "image/png") {
-    return `avatar-${Date.now()}.png`;
-  }
-
-  if (contentType === "image/webp") {
-    return `avatar-${Date.now()}.webp`;
-  }
-
-  if (contentType === "image/heic") {
-    return `avatar-${Date.now()}.heic`;
-  }
-
-  if (contentType === "image/heif") {
-    return `avatar-${Date.now()}.heif`;
-  }
-
-  return `avatar-${Date.now()}.jpg`;
-}
-
-function getInitials(value: string): string {
-  const trimmed = value.trim();
-
-  if (!trimmed) {
-    return "KG";
-  }
-
-  const tokens = trimmed.split(/\s+/).slice(0, 2);
-  return tokens.map((token) => token[0]?.toUpperCase() ?? "").join("") || trimmed.slice(0, 2).toUpperCase();
-}
-
-function getPrimaryRoleLabel(language: SupportedLanguage, accountTypes: string[]): string {
-  const prioritizedRole = accountTypes[0] ?? "player";
-  return ROLE_LABELS[language][prioritizedRole] ?? ROLE_LABELS[language].player;
-}
-
-function getMetrics(language: SupportedLanguage, reputationScore: number): { radar: RadarMetric[]; rows: MetricRow[] } {
-  const values = buildRadarValues(reputationScore);
-  const labels = METRIC_LABELS[language];
-
-  const rows: MetricRow[] = [
-    { key: "stamina", label: labels.stamina, value: values.stamina },
-    { key: "dribble", label: labels.dribble, value: values.dribble },
-    { key: "shooting", label: labels.shooting, value: values.shooting },
-    { key: "speed", label: labels.speed, value: values.speed },
-    { key: "defense", label: labels.defense, value: values.defense },
-    { key: "pass", label: labels.pass, value: values.pass },
-  ];
-
-  return {
-    radar: rows.map((row) => ({ key: row.key, label: row.label, value: row.value })),
-    rows,
-  };
+          <Pressable
+                key={`${props.label}-${segmentValue}`}
+                onPress={() => props.onSelect(segmentValue)}
+                style={[styles.statSegment, active ? styles.statSegmentActive : styles.statSegmentIdle]}
+              />
+            );
+          })}
+        </View>
+        <Pressable onPress={props.onIncrease} style={styles.statAdjustButton}>
+          <Feather color={PROFILE_TEXT_DARK} name="plus" size={16} />
+        </Pressable>
+      </View>
+    </View>
+  );
 }
 
 function StatTile(props: { value: number; label: string }): JSX.Element {
@@ -201,17 +179,20 @@ function StatTile(props: { value: number; label: string }): JSX.Element {
   );
 }
 
-export default function ProfileTabScreen(): JSX.Element {
+export default function PlayerProfile(): JSX.Element {
   const { language } = useI18n();
-  const copy = getProfileDashboardCopy(language);
+  const copy = getPlayerProfileCopy(language);
   const sectionCopy = getPlayerProfileSectionCopy(language);
+  const positionOptions = useMemo(() => getPositionOptions(language), [language]);
   const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
-  const dashboard = usePlayerProfileDashboard({
-    userId: user?.id ?? null,
-    enabled: isAuthenticated,
-  });
-  const [skillEditorSide, setSkillEditorSide] = useState<"left" | "right" | null>(null);
-  const [skillDraft, setSkillDraft] = useState(3);
+  const dashboard = usePlayerProfileDashboard({ userId: user?.id ?? null, enabled: isAuthenticated });
+
+  const [footEditorSide, setFootEditorSide] = useState<"left" | "right" | null>(null);
+  const [footSkillDraft, setFootSkillDraft] = useState(3);
+  const [positionPickerRank, setPositionPickerRank] = useState<PositionRank | null>(null);
+  const [positionDraft, setPositionDraft] = useState<PositionDraft>({ first: null, second: null, third: null });
+  const [statsEditorVisible, setStatsEditorVisible] = useState(false);
+  const [statsDraft, setStatsDraft] = useState<StatsDraft>(createStatsDraft(null));
 
   useEffect(() => {
     if (!isAuthLoading && !isAuthenticated) {
@@ -222,35 +203,157 @@ export default function ProfileTabScreen(): JSX.Element {
   const profile = dashboard.profileBundle?.profile ?? null;
   const playerProfile = dashboard.profileBundle?.playerProfile ?? null;
   const accountTypes = dashboard.profileBundle?.accountTypes ?? [];
+  const teams = dashboard.teams;
   const displayName = profile?.display_name?.trim() || user?.email || "KickGo";
-  const statusBadge = getStatusBadgeLabel(language, playerProfile?.preferred_position);
-  const primaryRoleLabel = getPrimaryRoleLabel(language, accountTypes);
+  const resolvedFirstPosition = playerProfile?.position_first ?? playerProfile?.preferred_position ?? null;
   const countryLabel = `${getCountryFlag(profile?.country_code)} ${getCountryLabel(language, profile?.country_code, copy.countryFallback)}`;
+  const primaryRoleLabel = getPrimaryRoleLabel(language, accountTypes);
   const secondaryTag = getAgeBandLabel(language, profile?.birth_year, primaryRoleLabel);
-  const tierDisplay = getTierDisplay(language, playerProfile?.skill_tier ?? 0, playerProfile?.reputation_score ?? 0);
-  const metrics = useMemo(() => getMetrics(language, playerProfile?.reputation_score ?? 0), [language, playerProfile?.reputation_score]);
+  const tierDisplay = getTierDisplay(language, playerProfile?.skill_tier, playerProfile?.reputation_score);
+  const statusBadge = getStatusBadgeLabel(language, resolvedFirstPosition);
+  const radarMetrics = useMemo(
+    () => buildRadarMetrics(language, playerProfile, statsEditorVisible ? statsDraft : undefined),
+    [language, playerProfile, statsDraft, statsEditorVisible],
+  );
   const playStyleLabels = useMemo(
     () => getPlayStyleLabels(language, playerProfile?.play_styles ?? []),
     [language, playerProfile?.play_styles],
   );
-  const needsPlayerProfileOnboarding = !playerProfile || !playerProfile.preferred_position;
+  const needsPlayerProfileOnboarding = !playerProfile || !resolvedFirstPosition;
+  const hasPositionChanges =
+    positionDraft.first !== (playerProfile?.position_first ?? playerProfile?.preferred_position ?? null) ||
+    positionDraft.second !== (playerProfile?.position_second ?? null) ||
+    positionDraft.third !== (playerProfile?.position_third ?? null);
+  const hasStatChanges =
+    statsDraft.stamina !== (playerProfile?.stat_stamina ?? 50) ||
+    statsDraft.dribble !== (playerProfile?.stat_dribble ?? 50) ||
+    statsDraft.shooting !== (playerProfile?.stat_shooting ?? 50) ||
+    statsDraft.passing !== (playerProfile?.stat_passing ?? 50) ||
+    statsDraft.defense !== (playerProfile?.stat_defense ?? 50) ||
+    statsDraft.speed !== (playerProfile?.stat_speed ?? 50);
+
+  useEffect(() => {
+    setPositionDraft(createPositionDraft(playerProfile));
+    setStatsDraft(createStatsDraft(playerProfile));
+  }, [playerProfile]);
+
+  const selectedPositionValues = useMemo(
+    () => [positionDraft.first, positionDraft.second, positionDraft.third].filter(Boolean) as PlayerPosition[],
+    [positionDraft],
+  );
+
+  const roleLabels = useMemo(
+    () =>
+      Object.fromEntries(
+        teams.map((membership) => [membership.id, getRoleBadgeLabel(language, membership.role)]),
+      ) as Record<string, string>,
+    [language, teams],
+  );
+
+  const openFootEditor = (side: "left" | "right"): void => {
+    if (!playerProfile) {
+      Alert.alert(copy.title, sectionCopy.playerProfileRequired);
+      return;
+    }
+
+    setFootEditorSide(side);
+    setFootSkillDraft(side === "left" ? playerProfile.left_foot_skill : playerProfile.right_foot_skill);
+  };
+
+  const handleSelectPosition = (value: PlayerPosition | null): void => {
+    if (!positionPickerRank) {
+      return;
+    }
+
+    setPositionDraft((current) => ({
+      ...current,
+      [positionPickerRank]: value,
+    }));
+    setPositionPickerRank(null);
+  };  const handleSavePositions = async (): Promise<void> => {
+    if (!positionDraft.first) {
+      Alert.alert(copy.title, copy.positionRequired);
+      return;
+    }
+
+    const uniquePositions = new Set(selectedPositionValues);
+    if (uniquePositions.size !== selectedPositionValues.length) {
+      Alert.alert(copy.title, copy.positionDuplicate);
+      return;
+    }
+
+    try {
+      await dashboard.updatePlayerProfile({
+        preferredPosition: positionDraft.first,
+        positionFirst: positionDraft.first,
+        positionSecond: positionDraft.second,
+        positionThird: positionDraft.third,
+      });
+      Alert.alert(copy.title, copy.positionsSaved);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update player profile.";
+      Alert.alert(copy.title, message);
+    }
+  };
+
+  const handleAdjustStat = (key: StatKey, value: number): void => {
+    setStatsDraft((current) => ({
+      ...current,
+      [key]: clampStat(value),
+    }));
+  };
+
+  const handleSaveStats = async (): Promise<void> => {
+    try {
+      await dashboard.updatePlayerProfile({
+        statStamina: statsDraft.stamina,
+        statDribble: statsDraft.dribble,
+        statShooting: statsDraft.shooting,
+        statPassing: statsDraft.passing,
+        statDefense: statsDraft.defense,
+        statSpeed: statsDraft.speed,
+      });
+      setStatsEditorVisible(false);
+      Alert.alert(copy.title, copy.statsSaved);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update player profile.";
+      Alert.alert(copy.title, message);
+    }
+  };
+
+  const handleSaveFootSkill = async (): Promise<void> => {
+    if (!footEditorSide || !playerProfile) {
+      return;
+    }
+
+    try {
+      await dashboard.updatePlayerProfile(
+        footEditorSide === "left"
+          ? { leftFootSkill: footSkillDraft }
+          : { rightFootSkill: footSkillDraft },
+      );
+      setFootEditorSide(null);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update player profile.";
+      Alert.alert(copy.title, message);
+    }
+  };
 
   const handleUploadAvatar = async (): Promise<void> => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (!permission.granted) {
-      Alert.alert("KickGo", copy.uploadAvatar);
+      Alert.alert(copy.title, "Media permission denied.");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.85,
+      quality: 0.9,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
-    if (result.canceled || result.assets.length === 0) {
+    if (result.canceled || !result.assets[0]) {
       return;
     }
 
@@ -258,373 +361,345 @@ export default function ProfileTabScreen(): JSX.Element {
     const contentType = getAvatarContentType(asset);
 
     if (!contentType) {
-      Alert.alert("KickGo", "Only JPG, PNG, WEBP, HEIC, or HEIF files are supported.");
+      Alert.alert(copy.title, "Unsupported image type.");
       return;
     }
 
     try {
       await dashboard.uploadAvatar({
         uri: asset.uri,
-        fileName: getAvatarFileName(asset, contentType),
+        fileName: getAvatarFileName(asset, contentType as SupportedAvatarContentType),
         contentType,
       });
     } catch (error: unknown) {
-      Alert.alert("KickGo", error instanceof Error ? error.message : "Avatar upload failed.");
+      const message = error instanceof Error ? error.message : "Failed to upload avatar.";
+      Alert.alert(copy.title, message);
     }
   };
 
-  const handleShare = async (): Promise<void> => {
-    try {
-      await Share.share({
-        message: `${displayName} - KickGo`,
-      });
-    } catch {
-      // ignore native share cancel
-    }
-  };
-
-  const openFootSkillEditor = (side: "left" | "right"): void => {
-    if (!playerProfile) {
-      Alert.alert("KickGo", sectionCopy.playerProfileRequired);
-      return;
-    }
-
-    setSkillEditorSide(side);
-    setSkillDraft(side === "left" ? playerProfile.left_foot_skill : playerProfile.right_foot_skill);
-  };
-
-  const closeFootSkillEditor = (): void => {
-    if (dashboard.isUpdatingPlayerProfile) {
-      return;
-    }
-
-    setSkillEditorSide(null);
-  };
-
-  const handleSaveFootSkill = async (): Promise<void> => {
-    if (!skillEditorSide) {
-      return;
-    }
-
-    try {
-      await dashboard.updatePlayerProfile(
-        skillEditorSide === "left" ? { leftFootSkill: skillDraft } : { rightFootSkill: skillDraft },
-      );
-      setSkillEditorSide(null);
-    } catch (error: unknown) {
-      Alert.alert("KickGo", error instanceof Error ? error.message : sectionCopy.footSkillSave);
-    }
-  };
-
-  const handleOpenPlayStyle = (): void => {
-    if (!playerProfile) {
-      Alert.alert("KickGo", sectionCopy.playerProfileRequired);
-      return;
-    }
-
-    router.push("/(tabs)/profile/play-style");
-  };
-
-  if (isAuthLoading || dashboard.isLoading) {
-    return (
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-        <View style={styles.loadingWrap}>
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyTitle}>{copy.noProfileTitle}</Text>
-          <Text style={styles.emptyBody}>{copy.noProfileBody}</Text>
-          <Pressable style={styles.primaryWideButton} onPress={() => router.push("/(onboarding)/create-profile")}>
-            <Text style={styles.primaryWideButtonLabel}>{copy.continueOnboarding}</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const previewMetrics = buildRadarMetrics(language, playerProfile, statsDraft);
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
       <ScrollView
-        refreshControl={<RefreshControl refreshing={dashboard.isLoading} onRefresh={() => void dashboard.refetchAll()} tintColor="#ffffff" />}
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl onRefresh={() => void dashboard.refetchAll()} refreshing={dashboard.isLoading} />}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerBlock}>
-          <View style={styles.headerActionsRow}>
-            <Pressable hitSlop={12} onPress={() => router.replace("/(tabs)/home")} style={styles.iconButton}>
-              <Ionicons color="#ffffff" name="chevron-back" size={24} />
-            </Pressable>
-            <View style={styles.headerRightActions}>
-              <Pressable hitSlop={12} onPress={() => void handleShare()} style={styles.iconButton}>
-                <Ionicons color="#ffffff" name="share-social-outline" size={22} />
-              </Pressable>
-              <Pressable hitSlop={12} onPress={() => router.push("/notifications")} style={styles.iconButton}>
-                <Ionicons color="#ffffff" name="notifications-outline" size={22} />
-              </Pressable>
-              <Pressable hitSlop={12} onPress={() => router.push("/(settings)/settings")} style={styles.iconButton}>
-                <Ionicons color="#ffffff" name="settings-outline" size={22} />
+        <ProfileHeroHeader
+          avatarUrl={profile?.avatar_url ?? null}
+          badgeLabel={statusBadge}
+          displayName={displayName}
+          onBack={() => router.replace("/(tabs)/home")}
+          onEdit={() => router.push("/(onboarding)/create-profile?mode=edit")}
+          onNotifications={() => router.push("/(settings)/notifications")}
+          onSettings={() => router.push("/(settings)/settings")}
+          onShare={() => Alert.alert(copy.title, "Share is not ready yet.")}
+          onUploadAvatar={() => void handleUploadAvatar()}
+          tags={[countryLabel, secondaryTag]}
+        />
+
+        <View style={styles.contentWrap}>
+          {dashboard.errorMessage ? <Text style={styles.errorText}>{dashboard.errorMessage}</Text> : null}
+
+          {needsPlayerProfileOnboarding ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>{copy.profileIncompleteTitle}</Text>
+              <Text style={styles.helperText}>{copy.profileIncompleteBody}</Text>
+
+          <Pressable onPress={() => router.push("/(onboarding)/player")} style={styles.primaryButton}>
+                <Text style={styles.primaryButtonLabel}>{copy.continueOnboarding}</Text>
               </Pressable>
             </View>
-          </View>
+          ) : null}
 
-          <View style={styles.profileHeroRow}>
-            <View style={styles.heroTextBlock}>
-              <Pressable onPress={() => router.push("/(onboarding)/create-profile?mode=edit")} style={styles.nameRow}>
-                <Text style={styles.heroName}>{displayName}</Text>
-                <Ionicons color="#ffffff" name="chevron-forward" size={18} />
-              </Pressable>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeLabel}>{statusBadge}</Text>
-              </View>
-              <View style={styles.tagRow}>
-                <View style={styles.tagPill}>
-                  <Text style={styles.tagLabel}>{countryLabel}</Text>
-                </View>
-                <View style={styles.tagPill}>
-                  <Text style={styles.tagLabel}>{secondaryTag}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.avatarWrap}>
-              {profile.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarFallbackLabel}>{getInitials(displayName)}</Text>
-                </View>
-              )}
-              <Pressable onPress={() => void handleUploadAvatar()} style={styles.cameraButton}>
-                <Ionicons color={TEXT_DARK} name="camera-outline" size={16} />
-              </Pressable>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.cardsWrap}>
           <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.categoryToggle}>
-                <Ionicons color={TEXT_SOFT} name="chevron-up" size={14} />
-                <Text style={styles.categoryToggleLabel}>{copy.competitionLabel}</Text>
-                <Ionicons color={TEXT_SOFT} name="chevron-down" size={14} />
-              </View>
-            </View>
-            <View style={styles.statsRow}>
-              <StatTile value={0} label={copy.statMatches} />
-              <StatTile value={0} label={copy.statGoals} />
-              <StatTile value={0} label={copy.statAssists} />
-              <StatTile value={0} label={copy.statMvp} />
+            <View style={styles.statsGrid}>
+              <StatTile label={copy.overviewMatches} value={0} />
+              <StatTile label={copy.overviewGoals} value={0} />
+              <StatTile label={copy.overviewAssists} value={0} />
+              <StatTile label={copy.overviewMvp} value={0} />
             </View>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{copy.teamTitle}</Text>
-            {dashboard.teams.length > 0 ? (
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{copy.teamSectionTitle}</Text>
+            </View>
+            {teams.length > 0 ? (
               <View style={styles.teamListWrap}>
-                {dashboard.teams.map((membership, index) => (
-                  <View key={membership.id}>
-                    <Pressable
-                      onPress={() =>
-                        router.push({
-                          pathname: "/(team)/[teamId]",
-                          params: { teamId: membership.team.id },
-                        })
-                      }
-                      style={styles.teamRow}
-                    >
-                      {membership.team.emblem_url ? (
-                        <Image source={{ uri: membership.team.emblem_url }} style={styles.teamEmblem} />
-                      ) : (
-                        <View style={styles.teamEmblemFallback}>
-                          <Text style={styles.teamEmblemFallbackLabel}>{membership.team.name.slice(0, 1).toUpperCase()}</Text>
-                        </View>
-                      )}
-                      <View style={styles.teamRowBody}>
-                        <View style={styles.teamNameRow}>
-                          <Text numberOfLines={1} style={styles.teamName}>{membership.team.name}</Text>
-                          <View style={styles.roleBadge}>
-                            <Text style={styles.roleBadgeLabel}>{getRoleBadgeLabel(language, membership.role)}</Text>
-                          </View>
-                        </View>
-                        <Text numberOfLines={1} style={styles.teamMeta}>
-                          {membership.team.province_code} / {membership.team.district_code}
-                        </Text>
-                      </View>
-                      <Ionicons color={TEXT_SOFT} name="chevron-forward" size={18} />
-                    </Pressable>
-                    {index < dashboard.teams.length - 1 ? <View style={styles.cardDivider} /> : null}
-                  </View>
+                {teams.map((membership) => (
+                  <TeamMembershipCard
+                    key={membership.id}
+                    membership={membership}
+                    roleLabel={roleLabels[membership.id] ?? membership.role}
+                  />
                 ))}
               </View>
             ) : (
-              <View style={styles.noTeamCard}>
-                <Text style={styles.noTeamTitle}>{copy.noTeamTitle}</Text>
-                <Text style={styles.noTeamBody}>{copy.noTeamBody}</Text>
-              </View>
+              <>
+                <Text style={styles.emptyTitle}>{copy.teamEmptyTitle}</Text>
+                <Text style={styles.helperText}>{copy.teamEmptyBody}</Text>
+                <View style={styles.inlineButtonRow}>
+
+          <Pressable onPress={() => router.push("/(tabs)/team/find")} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonLabel}>{copy.findTeam}</Text>
+                  </Pressable>
+
+          <Pressable onPress={() => router.push("/(tabs)/team/create")} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonLabel}>{copy.createTeam}</Text>
+                  </Pressable>
+                </View>
+              </>
             )}
-            <View style={styles.bottomActionRow}>
-              <Pressable onPress={() => router.push("/(team)/find")} style={styles.bottomActionButton}>
-                <Feather color={TEXT_SOFT} name="search" size={18} />
-                <Text style={styles.bottomActionLabel}>{copy.teamFind}</Text>
-              </Pressable>
-              <View style={styles.bottomActionDivider} />
-              <Pressable onPress={() => router.push("/(team)/create")} style={styles.bottomActionButton}>
-                <Ionicons color={TEXT_SOFT} name="add" size={20} />
-                <Text style={styles.bottomActionLabel}>{copy.teamCreate}</Text>
-              </Pressable>
-            </View>
           </View>
 
           <View style={styles.card}>
-            <View style={styles.levelHeaderRow}>
-              <Text style={styles.sectionTitle}>{copy.levelTitle}</Text>
-              <Pressable onPress={() => Alert.alert("KickGo", copy.levelInputSoon)} style={styles.levelTitleButton}>
-                <View style={styles.tierIconWrap}>
-                  <Ionicons color={BLUE} name="sparkles" size={15} />
-                </View>
-                <Text style={styles.tierSummary}>{`${tierDisplay.label} ${tierDisplay.score}`}</Text>
-                <Ionicons color={TEXT_SOFT} name="chevron-forward" size={16} />
-              </Pressable>
+            <Text style={styles.sectionTitle}>{copy.preferredPositionsTitle}</Text>
+            <Text style={styles.helperText}>{copy.preferredPositionsDescription}</Text>
+            <View style={styles.positionListWrap}>
+              <PositionRow
+                label={copy.firstChoice}
+                onPress={() => setPositionPickerRank("first")}
+                value={positionDraft.first ? copy.positionLabels[positionDraft.first] : copy.noPosition}
+              />
+              <PositionRow
+                label={copy.secondChoice}
+                onPress={() => setPositionPickerRank("second")}
+                value={positionDraft.second ? copy.positionLabels[positionDraft.second] : copy.noPosition}
+              />
+              <PositionRow
+                label={copy.thirdChoice}
+                onPress={() => setPositionPickerRank("third")}
+                value={positionDraft.third ? copy.positionLabels[positionDraft.third] : copy.noPosition}
+              />
             </View>
 
-            <ProfileRadarChart metrics={metrics.radar} />
+          <Pressable
+              disabled={!hasPositionChanges || dashboard.isUpdatingPlayerProfile}
+              onPress={() => void handleSavePositions()}
+              style={[styles.primaryButton, (!hasPositionChanges || dashboard.isUpdatingPlayerProfile) && styles.primaryButtonDisabled]}
+            >
+              <Text style={styles.primaryButtonLabel}>
+                {dashboard.isUpdatingPlayerProfile ? copy.saving : copy.savePositions}
+              </Text>
+            </Pressable>
+          </View>
 
-            <View style={styles.metricRowsWrap}>
-              {metrics.rows.map((metric) => (
-                <View key={metric.key} style={styles.metricRow}>
-                  <Text style={styles.metricLabel}>{metric.label}</Text>
-                  <View style={styles.metricTrack}>
-                    <View style={[styles.metricFill, { width: `${metric.value}%` }]} />
-                  </View>
-                  <Text style={styles.metricValue}>{metric.value}/100</Text>
-                </View>
+          <View style={styles.card}>
+            <View style={styles.sectionHeaderRow}>
+              <View>
+                <Text style={styles.sectionTitle}>{copy.levelTitle}</Text>
+                <Text style={styles.tierValue}>{tierDisplay}</Text>
+              </View>
+
+          <Pressable onPress={() => setStatsEditorVisible(true)} style={styles.ghostButton}>
+                <Text style={styles.ghostButtonLabel}>{copy.levelEdit}</Text>
+              </Pressable>
+            </View>
+            <ProfileRadarChart metrics={previewMetrics} />
+            <View style={styles.statsGrid}> 
+              {previewMetrics.map((metric) => (
+                <StatTile key={metric.key} label={metric.label} value={metric.value} />
               ))}
             </View>
-
-            <Pressable onPress={() => Alert.alert("KickGo", copy.scoreInputSoon)} style={styles.fabButton}>
-              <Ionicons color="#ffffff" name="add" size={26} />
-            </Pressable>
           </View>
 
           <View style={styles.card}>
-            <View style={styles.inlineHeaderRow}>
-              <View>
-                <Text style={styles.sectionTitle}>{sectionCopy.footSkillTitle}</Text>
-                <Text style={styles.sectionDescription}>{sectionCopy.footSkillDescription}</Text>
-              </View>
-              <View style={styles.preferredFootBadge}>
-                <Text style={styles.preferredFootLabel}>{`${sectionCopy.preferredFootLabel} / ${getPreferredFootLabel(language, playerProfile?.preferred_foot)}`}</Text>
-              </View>
-            </View>
-
+            <Text style={styles.sectionTitle}>{sectionCopy.footSkillTitle}</Text>
+            <Text style={styles.helperText}>{sectionCopy.footSkillDescription}</Text>
             <View style={styles.footSkillRow}>
-              <Pressable
-                disabled={dashboard.isUpdatingPlayerProfile}
-                onPress={() => openFootSkillEditor("left")}
-                style={({ pressed }) => [styles.footSkillItem, pressed ? styles.footSkillItemPressed : null]}
-              >
-                <View style={styles.footSkillIconWrap}>
-                  <FontAwesome5 color={BLUE} name="shoe-prints" size={20} />
-                </View>
+
+          <Pressable onPress={() => openFootEditor("left")} style={styles.footSkillCard}>
+                <Ionicons color={PROFILE_BLUE} name="footsteps" size={28} />
                 <Text style={styles.footSkillLabel}>{sectionCopy.leftFoot}</Text>
-                <Text style={styles.footSkillValue}>{playerProfile?.left_foot_skill ?? 3}/5</Text>
+                <Text style={styles.footSkillValue}>{playerProfile?.left_foot_skill ?? 3}</Text>
               </Pressable>
 
-              <Pressable
-                disabled={dashboard.isUpdatingPlayerProfile}
-                onPress={() => openFootSkillEditor("right")}
-                style={({ pressed }) => [styles.footSkillItem, pressed ? styles.footSkillItemPressed : null]}
-              >
-                <View style={styles.footSkillIconWrap}>
-                  <FontAwesome5 color={BLUE} name="shoe-prints" size={20} />
-                </View>
+          <Pressable onPress={() => openFootEditor("right")} style={styles.footSkillCard}>
+                <Ionicons color={PROFILE_BLUE} name="footsteps-outline" size={28} />
                 <Text style={styles.footSkillLabel}>{sectionCopy.rightFoot}</Text>
-                <Text style={styles.footSkillValue}>{playerProfile?.right_foot_skill ?? 3}/5</Text>
+                <Text style={styles.footSkillValue}>{playerProfile?.right_foot_skill ?? 3}</Text>
               </Pressable>
             </View>
+            <Text style={styles.subtleValueLabel}>
+              {`${sectionCopy.preferredFootLabel}: ${getPreferredFootLabel(language, playerProfile?.preferred_foot)}`}
+            </Text>
           </View>
 
-          <Pressable onPress={handleOpenPlayStyle} style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}>
-            <View style={styles.playStyleHeaderRow}>
-              <View style={styles.playStyleTitleWrap}>
+          <Pressable
+            onPress={() => {
+              if (!playerProfile) {
+                Alert.alert(copy.title, sectionCopy.playerProfileRequired);
+                return;
+              }
+              router.push("/(tabs)/profile/play-style");
+            }}
+            style={styles.card}
+          >
+            <View style={styles.sectionHeaderRow}>
+              <View>
                 <Text style={styles.sectionTitle}>{sectionCopy.playStyleTitle}</Text>
-                <Text style={styles.sectionDescription}>{sectionCopy.playStyleSubtitle}</Text>
+                <Text style={styles.helperText}>{sectionCopy.playStyleSubtitle}</Text>
               </View>
-              <Ionicons color={TEXT_SOFT} name="chevron-forward" size={18} />
+              <Ionicons color={PROFILE_TEXT_SOFT} name="chevron-forward" size={20} />
+            </View>
+            <View style={styles.playStyleWrap}>
+              {playStyleLabels.length > 0 ? (
+                playStyleLabels.map((label) => (
+                  <View key={label} style={styles.playStyleChip}>
+                    <Text style={styles.playStyleChipLabel}>{label}</Text>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.playStyleEmptyChip}>
+                  <Text style={styles.playStyleEmptyLabel}>{sectionCopy.playStyleEmpty}</Text>
+                </View>
+              )}
             </View>
 
-            {playStyleLabels.length > 0 ? (
-              <View style={styles.playStyleTagWrap}>
-                {playStyleLabels.map((label) => (
-                  <View key={label} style={styles.playStyleTag}>
-                    <Text style={styles.playStyleTagLabel}>{label}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.emptyStylePill}>
-                <Text style={styles.emptyStylePillLabel}>{sectionCopy.playStyleEmpty}</Text>
-              </View>
-            )}
           </Pressable>
-
-          {dashboard.errorMessage ? <Text style={styles.errorText}>{dashboard.errorMessage}</Text> : null}
+          <MyMercenaryApplicationsPreview />
         </View>
       </ScrollView>
 
-      <Modal animationType="slide" transparent visible={skillEditorSide !== null} onRequestClose={closeFootSkillEditor}>
-        <View style={styles.modalBackdrop}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={closeFootSkillEditor} />
-          <View style={styles.bottomSheet}>
-            <View style={styles.bottomSheetHandle} />
-            <Text style={styles.bottomSheetTitle}>{sectionCopy.footSkillModalTitle}</Text>
-            <Text style={styles.bottomSheetSubtitle}>
-              {skillEditorSide === "left" ? sectionCopy.leftFoot : sectionCopy.rightFoot}
-            </Text>
+      <Modal animationType="fade" onRequestClose={() => setPositionPickerRank(null)} transparent visible={positionPickerRank !== null}>
+        <Pressable onPress={() => setPositionPickerRank(null)} style={styles.modalBackdrop}>
 
-            <View style={styles.skillOptionRow}>
-              {FOOT_SKILL_VALUES.map((value) => {
-                const isSelected = value === skillDraft;
+          <Pressable style={styles.sheetCard}>
+            <Text style={styles.sheetTitle}>{copy.choosePosition}</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {positionPickerRank !== "first" ? (
 
+          <Pressable onPress={() => handleSelectPosition(null)} style={styles.sheetRow}>
+                  <Text style={styles.sheetRowLabel}>{copy.noPosition}</Text>
+                  {(positionPickerRank === "second" ? positionDraft.second : positionDraft.third) === null ? (
+                    <Ionicons color={PROFILE_GREEN} name="checkmark" size={18} />
+                  ) : null}
+                </Pressable>
+              ) : null}
+              {positionOptions.map((option) => {
+                const isSelected = positionDraft[positionPickerRank ?? "first"] === option.value;
+                const isTaken = selectedPositionValues.includes(option.value) && !isSelected;
                 return (
-                  <Pressable
-                    key={value}
-                    disabled={dashboard.isUpdatingPlayerProfile}
-                    onPress={() => setSkillDraft(value)}
-                    style={[styles.skillOption, isSelected ? styles.skillOptionSelected : styles.skillOptionIdle]}
+
+          <Pressable
+                    disabled={isTaken}
+                    key={option.value}
+                    onPress={() => handleSelectPosition(option.value)}
+                    style={[styles.sheetRow, isTaken && styles.sheetRowDisabled]}
                   >
-                    <Text style={[styles.skillOptionLabel, isSelected ? styles.skillOptionLabelSelected : styles.skillOptionLabelIdle]}>
-                      {value}
-                    </Text>
+                    <View>
+                      <Text style={[styles.sheetRowLabel, isTaken && styles.sheetRowDisabledLabel]}>{option.code}</Text>
+                      <Text style={[styles.sheetRowMeta, isTaken && styles.sheetRowDisabledLabel]}>{option.label}</Text>
+                    </View>
+                    {isSelected ? <Ionicons color={PROFILE_GREEN} name="checkmark" size={18} /> : null}
                   </Pressable>
                 );
               })}
-            </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
-            <View style={styles.bottomSheetActions}>
-              <Pressable disabled={dashboard.isUpdatingPlayerProfile} onPress={closeFootSkillEditor} style={styles.sheetSecondaryButton}>
-                <Text style={styles.sheetSecondaryLabel}>{sectionCopy.footSkillCancel}</Text>
+      <Modal animationType="fade" onRequestClose={() => setStatsEditorVisible(false)} transparent visible={statsEditorVisible}>
+        <Pressable onPress={() => setStatsEditorVisible(false)} style={styles.modalBackdrop}>
+
+          <Pressable style={styles.sheetCardLarge}>
+            <Text style={styles.sheetTitle}>{copy.statsEditorTitle}</Text>
+            <Text style={styles.sheetBody}>{copy.statsEditorBody}</Text>
+            <ProfileRadarChart metrics={previewMetrics} size={236} />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <StatEditorRow
+                label={copy.staminaLabel}
+                onDecrease={() => handleAdjustStat("stamina", statsDraft.stamina - 5)}
+                onIncrease={() => handleAdjustStat("stamina", statsDraft.stamina + 5)}
+                onSelect={(value) => handleAdjustStat("stamina", value)}
+                value={statsDraft.stamina}
+              />
+              <StatEditorRow
+                label={copy.dribbleLabel}
+                onDecrease={() => handleAdjustStat("dribble", statsDraft.dribble - 5)}
+                onIncrease={() => handleAdjustStat("dribble", statsDraft.dribble + 5)}
+                onSelect={(value) => handleAdjustStat("dribble", value)}
+                value={statsDraft.dribble}
+              />
+              <StatEditorRow
+                label={copy.shootingLabel}
+                onDecrease={() => handleAdjustStat("shooting", statsDraft.shooting - 5)}
+                onIncrease={() => handleAdjustStat("shooting", statsDraft.shooting + 5)}
+                onSelect={(value) => handleAdjustStat("shooting", value)}
+                value={statsDraft.shooting}
+              />
+              <StatEditorRow
+                label={copy.passingLabel}
+                onDecrease={() => handleAdjustStat("passing", statsDraft.passing - 5)}
+                onIncrease={() => handleAdjustStat("passing", statsDraft.passing + 5)}
+                onSelect={(value) => handleAdjustStat("passing", value)}
+                value={statsDraft.passing}
+              />
+              <StatEditorRow
+                label={copy.defenseLabel}
+                onDecrease={() => handleAdjustStat("defense", statsDraft.defense - 5)}
+                onIncrease={() => handleAdjustStat("defense", statsDraft.defense + 5)}
+                onSelect={(value) => handleAdjustStat("defense", value)}
+                value={statsDraft.defense}
+              />
+              <StatEditorRow
+                label={copy.speedLabel}
+                onDecrease={() => handleAdjustStat("speed", statsDraft.speed - 5)}
+                onIncrease={() => handleAdjustStat("speed", statsDraft.speed + 5)}
+                onSelect={(value) => handleAdjustStat("speed", value)}
+                value={statsDraft.speed}
+              />
+            </ScrollView>
+            <View style={styles.inlineButtonRow}>
+
+          <Pressable onPress={() => setStatsEditorVisible(false)} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonLabel}>{copy.cancel}</Text>
               </Pressable>
-              <Pressable
-                disabled={dashboard.isUpdatingPlayerProfile}
-                onPress={() => void handleSaveFootSkill()}
-                style={[styles.sheetPrimaryButton, dashboard.isUpdatingPlayerProfile ? styles.sheetPrimaryButtonDisabled : null]}
+
+          <Pressable
+                disabled={!hasStatChanges || dashboard.isUpdatingPlayerProfile}
+                onPress={() => void handleSaveStats()}
+                style={[styles.primaryButton, styles.modalPrimaryButton, (!hasStatChanges || dashboard.isUpdatingPlayerProfile) && styles.primaryButtonDisabled]}
               >
-                <Text style={styles.sheetPrimaryLabel}>
-                  {dashboard.isUpdatingPlayerProfile ? "Saving..." : sectionCopy.footSkillSave}
-                </Text>
+                <Text style={styles.primaryButtonLabel}>{dashboard.isUpdatingPlayerProfile ? copy.saving : copy.saveStats}</Text>
               </Pressable>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal animationType="fade" onRequestClose={() => setFootEditorSide(null)} transparent visible={footEditorSide !== null}>
+        <Pressable onPress={() => setFootEditorSide(null)} style={styles.modalBackdrop}>
+
+          <Pressable style={styles.sheetCard}>
+            <Text style={styles.sheetTitle}>{sectionCopy.footSkillModalTitle}</Text>
+            <View style={styles.skillOptionsWrap}>
+              {FOOT_SKILL_VALUES.map((value) => (
+
+          <Pressable
+                  key={`foot-skill-${value}`}
+                  onPress={() => setFootSkillDraft(value)}
+                  style={[styles.skillChip, footSkillDraft === value && styles.skillChipActive]}
+                >
+                  <Text style={[styles.skillChipLabel, footSkillDraft === value && styles.skillChipLabelActive]}>{value}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.inlineButtonRow}>
+
+          <Pressable onPress={() => setFootEditorSide(null)} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonLabel}>{sectionCopy.footSkillCancel}</Text>
+              </Pressable>
+
+          <Pressable onPress={() => void handleSaveFootSkill()} style={[styles.primaryButton, styles.modalPrimaryButton]}>
+                <Text style={styles.primaryButtonLabel}>{sectionCopy.footSkillSave}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
@@ -633,595 +708,409 @@ export default function ProfileTabScreen(): JSX.Element {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: PAGE_BG,
+    backgroundColor: PROFILE_PAGE_BG,
   },
   scrollContent: {
-    paddingBottom: 48,
+    paddingBottom: 44,
   },
-  loadingWrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: PAGE_BG,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: TEXT_SOFT,
-  },
-  emptyWrap: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    backgroundColor: PAGE_BG,
-  },
-  emptyTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: TEXT_DARK,
-  },
-  emptyBody: {
-    marginTop: 12,
-    fontSize: 15,
-    lineHeight: 22,
-    color: TEXT_SOFT,
-  },
-  primaryWideButton: {
-    marginTop: 24,
-    minHeight: 56,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: RED,
-  },
-  primaryWideButtonLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#ffffff",
-  },
-  headerBlock: {
-    backgroundColor: HEADER_BG,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 96,
-  },
-  headerActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerRightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  iconButton: {
-    minWidth: 28,
-    minHeight: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileHeroRow: {
-    marginTop: 28,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+  contentWrap: {
+    marginTop: -68,
+    paddingHorizontal: 16,
     gap: 16,
   },
-  heroTextBlock: {
-    flex: 1,
-    gap: 14,
+  card: {
+    backgroundColor: PROFILE_CARD_BG,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: PROFILE_BORDER,
+    padding: 20,
+    gap: 12,
   },
-  nameRow: {
+  errorText: {
+    fontSize: 13,
+    color: "#b91c1c",
+    paddingHorizontal: 4,
+  },
+  sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "space-between",
+    gap: 12,
   },
-  heroName: {
-    fontSize: 38,
-    fontWeight: "900",
-    color: "#ffffff",
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: PROFILE_TEXT_DARK,
   },
-  statusBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: TAG_BG,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  helperText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: PROFILE_TEXT_SOFT,
   },
-  statusBadgeLabel: {
+  tierValue: {
+    marginTop: 4,
     fontSize: 14,
     fontWeight: "700",
-    color: "#ffffff",
+    color: PROFILE_BLUE,
   },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  tagPill: {
-    borderRadius: 14,
-    backgroundColor: TAG_BG,
+  ghostButton: {
+    borderRadius: 999,
+    backgroundColor: PROFILE_BLUE_SOFT,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  tagLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#ffffff",
+  ghostButtonLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: PROFILE_BLUE,
   },
-  avatarWrap: {
-    position: "relative",
-    marginTop: 8,
-  },
-  avatarImage: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    borderWidth: 4,
-    borderColor: "#ffffff",
-    backgroundColor: "#d9d9d9",
-  },
-  avatarFallback: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    borderWidth: 4,
-    borderColor: "#ffffff",
-    backgroundColor: "#d8b4fe",
+  primaryButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    backgroundColor: PROFILE_BLUE,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 16,
   },
-  avatarFallbackLabel: {
-    fontSize: 34,
+  primaryButtonDisabled: {
+    opacity: 0.45,
+  },
+  primaryButtonLabel: {
+    fontSize: 15,
     fontWeight: "800",
-    color: HEADER_BG,
+    color: "#ffffff",
   },
-  cameraButton: {
-    position: "absolute",
-    right: 2,
-    bottom: 2,
-    width: 32,
-    height: 32,
+  secondaryButton: {
+    flex: 1,
+    minHeight: 46,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: PROFILE_BORDER,
     backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 14,
   },
-  cardsWrap: {
-    marginTop: -56,
-    paddingHorizontal: 20,
-    gap: 18,
+  secondaryButtonLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: PROFILE_TEXT_DARK,
   },
-  card: {
-    borderRadius: 22,
-    backgroundColor: CARD_BG,
-    padding: 20,
-    shadowColor: "#0f172a",
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+  inlineButtonRow: {
+    flexDirection: "row",
+    gap: 10,
   },
-  cardHeaderRow: {
+  modalPrimaryButton: {
+    flex: 1,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: PROFILE_TEXT_DARK,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  statTile: {
+    width: "47%",
+    borderRadius: 18,
+    backgroundColor: "#f8fafc",
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    gap: 4,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: PROFILE_TEXT_DARK,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: PROFILE_TEXT_SOFT,
+  },
+  teamListWrap: {
+    gap: 12,
+  },
+  teamCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: PROFILE_BORDER,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
   },
-  categoryToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  categoryToggleLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: TEXT_DARK,
-  },
-  statsRow: {
-    marginTop: 18,
-    flexDirection: "row",
-  },
-  statTile: {
+  teamCardLeft: {
     flex: 1,
-    alignItems: "center",
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: TEXT_DARK,
-  },
-  statLabel: {
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: "600",
-    color: TEXT_SOFT,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: TEXT_DARK,
-  },
-  teamListWrap: {
-    marginTop: 14,
-  },
-  teamRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 14,
   },
   teamEmblem: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     backgroundColor: "#e5e7eb",
   },
   teamEmblemFallback: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "#111827",
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    backgroundColor: "#dbeafe",
     alignItems: "center",
     justifyContent: "center",
   },
   teamEmblemFallbackLabel: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#ffffff",
+    color: PROFILE_BLUE,
   },
-  teamRowBody: {
+  teamCopyWrap: {
     flex: 1,
-    gap: 6,
+    gap: 3,
   },
-  teamNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  teamName: {
-    maxWidth: "68%",
-    fontSize: 17,
-    fontWeight: "800",
-    color: TEXT_DARK,
-  },
-  roleBadge: {
-    borderRadius: 999,
-    backgroundColor: OWNER_BG,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  roleBadgeLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: OWNER_TEXT,
-  },
-  teamMeta: {
-    fontSize: 13,
-    color: TEXT_SOFT,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: BORDER,
-  },
-  noTeamCard: {
-    marginTop: 16,
-    borderRadius: 18,
-    backgroundColor: "#f8fafc",
-    padding: 16,
-    gap: 8,
-  },
-  noTeamTitle: {
+  teamNameLabel: {
     fontSize: 16,
     fontWeight: "800",
-    color: TEXT_DARK,
+    color: PROFILE_TEXT_DARK,
   },
-  noTeamBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: TEXT_SOFT,
-  },
-  bottomActionRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingTop: 14,
-  },
-  bottomActionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 8,
-  },
-  bottomActionDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: BORDER,
-  },
-  bottomActionLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: TEXT_SOFT,
-  },
-  levelHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  levelTitleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  tierIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#e0ecff",
-  },
-  tierSummary: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: BLUE,
-  },
-  metricRowsWrap: {
-    marginTop: 4,
-    gap: 10,
-  },
-  metricRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  metricLabel: {
-    width: 62,
+  teamSubLabel: {
     fontSize: 13,
-    color: TEXT_DARK,
+    color: PROFILE_TEXT_SOFT,
   },
-  metricTrack: {
-    flex: 1,
-    height: 8,
+  teamRolePill: {
     borderRadius: 999,
-    backgroundColor: "#e5edf9",
-    overflow: "hidden",
-  },
-  metricFill: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: BLUE,
-  },
-  metricValue: {
-    width: 52,
-    textAlign: "right",
-    fontSize: 12,
-    color: TEXT_SOFT,
-  },
-  fabButton: {
-    position: "absolute",
-    right: 18,
-    bottom: 18,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: RED,
-    shadowColor: RED,
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
-  },
-  cardPressed: {
-    opacity: 0.96,
-  },
-  inlineHeaderRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  sectionDescription: {
-    marginTop: 6,
-    fontSize: 13,
-    lineHeight: 18,
-    color: TEXT_SOFT,
-  },
-  preferredFootBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: BLUE_SOFT,
+    backgroundColor: PROFILE_OWNER_BG,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  preferredFootLabel: {
+  teamRolePillLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: BLUE,
+    color: PROFILE_OWNER_TEXT,
+  },
+  positionListWrap: {
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: PROFILE_BORDER,
+  },
+  positionRow: {
+    minHeight: 58,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: PROFILE_BORDER,
+    backgroundColor: "#ffffff",
+  },
+  positionRankLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: PROFILE_TEXT_DARK,
+  },
+  positionValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  positionValue: {
+    fontSize: 14,
+    color: PROFILE_TEXT_SOFT,
   },
   footSkillRow: {
-    marginTop: 16,
     flexDirection: "row",
     gap: 12,
   },
-  footSkillItem: {
+  footSkillCard: {
     flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 16,
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#fbfdff",
-  },
-  footSkillItemPressed: {
-    opacity: 0.9,
-  },
-  footSkillIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: BLUE_SOFT,
+    borderRadius: 20,
+    backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 20,
+    gap: 6,
   },
   footSkillLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    color: TEXT_DARK,
+    color: PROFILE_TEXT_DARK,
   },
   footSkillValue: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: BLUE,
+    fontSize: 28,
+    fontWeight: "900",
+    color: PROFILE_BLUE,
   },
-  playStyleHeaderRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
+  subtleValueLabel: {
+    fontSize: 13,
+    color: PROFILE_TEXT_SOFT,
   },
-  playStyleTitleWrap: {
-    flex: 1,
-  },
-  playStyleTagWrap: {
-    marginTop: 16,
+  playStyleWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
   },
-  playStyleTag: {
+  playStyleChip: {
     borderRadius: 999,
-    backgroundColor: BLUE_SOFT,
+    backgroundColor: PROFILE_BLUE_SOFT,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
-  playStyleTagLabel: {
-    fontSize: 14,
+  playStyleChipLabel: {
+    fontSize: 13,
     fontWeight: "700",
-    color: BLUE,
+    color: PROFILE_BLUE,
   },
-  emptyStylePill: {
-    alignSelf: "flex-start",
-    marginTop: 16,
+  playStyleEmptyChip: {
     borderRadius: 999,
-    backgroundColor: "#eef2f7",
+    backgroundColor: "#f3f4f6",
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
-  emptyStylePillLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: TEXT_SOFT,
+  playStyleEmptyLabel: {
+    fontSize: 13,
+    color: PROFILE_TEXT_SOFT,
   },
   modalBackdrop: {
     flex: 1,
-    justifyContent: "flex-end",
     backgroundColor: MODAL_BACKDROP,
+    paddingHorizontal: 20,
+    justifyContent: "flex-end",
   },
-  bottomSheet: {
+  sheetCard: {
+    maxHeight: "72%",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     backgroundColor: "#ffffff",
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    gap: 14,
   },
-  bottomSheetHandle: {
-    alignSelf: "center",
-    width: 48,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "#dbe3ef",
-    marginBottom: 18,
-  },
-  bottomSheetTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: TEXT_DARK,
-  },
-  bottomSheetSubtitle: {
-    marginTop: 8,
-    fontSize: 14,
-    color: TEXT_SOFT,
-  },
-  skillOptionRow: {
-    marginTop: 24,
-    flexDirection: "row",
-    gap: 10,
-  },
-  skillOption: {
-    flex: 1,
-    minHeight: 56,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  skillOptionSelected: {
-    backgroundColor: BLUE,
-    borderColor: BLUE,
-  },
-  skillOptionIdle: {
+  sheetCardLarge: {
+    maxHeight: "84%",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     backgroundColor: "#ffffff",
-    borderColor: BORDER,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+    gap: 14,
   },
-  skillOptionLabel: {
+  sheetTitle: {
     fontSize: 18,
     fontWeight: "800",
+    color: PROFILE_TEXT_DARK,
   },
-  skillOptionLabelSelected: {
-    color: "#ffffff",
+  sheetBody: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: PROFILE_TEXT_SOFT,
   },
-  skillOptionLabelIdle: {
-    color: TEXT_DARK,
-  },
-  bottomSheetActions: {
-    marginTop: 24,
+  sheetRow: {
+    minHeight: 56,
     flexDirection: "row",
-    gap: 12,
-  },
-  sheetSecondaryButton: {
-    flex: 1,
-    minHeight: 54,
-    borderRadius: 18,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eef2f7",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: PROFILE_BORDER,
   },
-  sheetSecondaryLabel: {
+  sheetRowDisabled: {
+    opacity: 0.35,
+  },
+  sheetRowLabel: {
     fontSize: 15,
     fontWeight: "700",
-    color: TEXT_DARK,
+    color: PROFILE_TEXT_DARK,
   },
-  sheetPrimaryButton: {
-    flex: 1,
-    minHeight: 54,
-    borderRadius: 18,
+  sheetRowMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    color: PROFILE_TEXT_SOFT,
+  },
+  sheetRowDisabledLabel: {
+    color: PROFILE_TEXT_SOFT,
+  },
+  statEditorRow: {
+    gap: 10,
+    marginBottom: 14,
+  },
+  statEditorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  statEditorLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: PROFILE_TEXT_DARK,
+  },
+  statEditorValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: PROFILE_BLUE,
+  },
+  statEditorControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  statAdjustButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f3f4f6",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: BLUE,
   },
-  sheetPrimaryButtonDisabled: {
-    opacity: 0.55,
+  statSegmentsWrap: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 4,
   },
-  sheetPrimaryLabel: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#ffffff",
+  statSegment: {
+    flex: 1,
+    height: 12,
+    borderRadius: 999,
   },
-  errorText: {
-    paddingHorizontal: 8,
-    textAlign: "center",
+  statSegmentActive: {
+    backgroundColor: PROFILE_BLUE,
+  },
+  statSegmentIdle: {
+    backgroundColor: "#dbe3ef",
+  },
+  skillOptionsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  skillChip: {
+    minWidth: 52,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: PROFILE_BORDER,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  skillChipActive: {
+    borderColor: PROFILE_GREEN,
+    backgroundColor: "#e8fff6",
+  },
+  skillChipLabel: {
     fontSize: 14,
-    lineHeight: 20,
-    color: "#b91c1c",
+    fontWeight: "700",
+    color: PROFILE_TEXT_DARK,
+  },
+  skillChipLabelActive: {
+    color: PROFILE_GREEN,
   },
 });
-

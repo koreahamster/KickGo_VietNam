@@ -1,4 +1,6 @@
-﻿import { supabase } from "@/lib/supabase";
+import { bootstrapDataToProfileBundle } from "@/core/types/bootstrap.types";
+import { supabase } from "@/lib/supabase";
+import { fetchBootstrap } from "@/services/bootstrap.service";
 import type {
   AccountType,
   AddAccountTypeResult,
@@ -230,7 +232,7 @@ export async function getMyProfileBundle(): Promise<ProfileBundle> {
     supabase
       .from("player_profiles")
       .select(
-        "user_id, preferred_position, preferred_foot, dominant_foot, top_size, shoe_size, skill_tier, reputation_score, left_foot_skill, right_foot_skill, play_styles",
+        "user_id, preferred_position, position_first, position_second, position_third, preferred_foot, dominant_foot, top_size, shoe_size, skill_tier, reputation_score, stat_stamina, stat_dribble, stat_shooting, stat_passing, stat_defense, stat_speed, left_foot_skill, right_foot_skill, play_styles",
       )
       .eq("user_id", userId)
       .maybeSingle(),
@@ -379,11 +381,20 @@ export async function updatePlayerProfile(
   input: UpdatePlayerProfileInput,
 ): Promise<RoleProfileResult> {
   const response = await invokeFunction<ApiResponse<RoleProfileResult>>("update-player-profile", {
-    preferred_position: input.preferredPosition,
+    preferred_position: input.preferredPosition ?? input.positionFirst ?? undefined,
+    position_first: input.positionFirst,
+    position_second: input.positionSecond,
+    position_third: input.positionThird,
     preferred_foot: input.preferredFoot,
     dominant_foot: input.dominantFoot,
     top_size: input.topSize,
     shoe_size: input.shoeSize,
+    stat_stamina: input.statStamina,
+    stat_dribble: input.statDribble,
+    stat_shooting: input.statShooting,
+    stat_passing: input.statPassing,
+    stat_defense: input.statDefense,
+    stat_speed: input.statSpeed,
     left_foot_skill: input.leftFootSkill,
     right_foot_skill: input.rightFootSkill,
     play_styles: input.playStyles,
@@ -397,3 +408,4 @@ export async function createRefereeProfile(): Promise<RoleProfileResult> {
 
   return assertSuccess(response, "Failed to create referee profile.");
 }
+

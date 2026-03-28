@@ -1,24 +1,44 @@
-import { supabase } from "@/lib/supabase";
 import type { ApiResponse } from "@/types/profile.types";
+import { supabase } from "@/lib/supabase";
 import type {
+  CreateAnnouncementRequest,
+  CreateTeamAnnouncementApiResponse,
   CreateTeamInput,
   CreateTeamInviteApiResponse,
   CreateTeamInviteResult,
   CreateTeamResult,
   JoinTeamApiResponse,
   JoinTeamResult,
+  KickTeamMemberApiResponse,
+  KickTeamMemberInput,
+  KickTeamMemberResult,
+  RecruitmentApplication,
+  RecruitmentDecision,
   RequestTeamAssetUploadApiResponse,
   RequestTeamAssetUploadInput,
   RequestTeamAssetUploadResult,
+  RespondRecruitmentApplicationApiResponse,
+  SupportedTeamAssetContentType,
+  TeamAnnouncement,
+  TeamDetailRecord,
   TeamMemberProfileRecord,
   TeamMemberRole,
   TeamMemberStatus,
   TeamMembershipRecord,
+  TeamMembersQueryResult,
   TeamRecord,
+  TeamRecruitmentPost,
   TeamRosterMemberRecord,
-  TeamDetailRecord,
+  ToggleAnnouncementPinApiResponse,
+  TogglePinRequest,
+  ToggleRecruitmentStatusInput,
+  UpdateRecruitmentStatusApiResponse,
+  UpdateTeamApiResponse,
+  UpdateTeamInput,
+  UpdateTeamMemberRoleInput,
+  UpdateTeamMemberRoleResult,
+  UpdateTeamResult,
   UploadTeamAssetInput,
-  SupportedTeamAssetContentType,
 } from "@/types/team.types";
 
 type FunctionErrorContext = {
@@ -46,8 +66,52 @@ type RawTeamRosterRow = {
   profile: TeamMemberProfileRecord | TeamMemberProfileRecord[] | null;
 };
 
+type RawAnnouncementAuthorRow = {
+  display_name: string | null;
+} | {
+  display_name: string | null;
+}[] | null;
+
+type RawTeamAnnouncementRow = {
+  id: string;
+  team_id: string;
+  title: string;
+  body: string;
+  is_pinned: boolean;
+  created_at: string;
+  author_id: string;
+  author: RawAnnouncementAuthorRow;
+};
+
+type RawRecruitmentPostRow = {
+  id: string;
+  team_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  created_by: string | null;
+};
+
+type RawRecruitmentApplicantProfileRow = {
+  display_name: string | null;
+  avatar_url: string | null;
+} | {
+  display_name: string | null;
+  avatar_url: string | null;
+}[] | null;
+
+type RawRecruitmentApplicationRow = {
+  id: string;
+  post_id: string;
+  applicant_id: string;
+  message: string;
+  status: RecruitmentApplication["status"];
+  created_at: string;
+  applicant: RawRecruitmentApplicantProfileRow;
+};
+
 const TEAM_SELECT_COLUMNS =
-  "id, name, slug, emblem_url, photo_url, country_code, province_code, district_code, home_ground, description, visibility, is_recruiting, sport_type, founded_date, gender_type, age_groups, uniform_colors, match_days, match_times, monthly_fee, formation_a, formation_b, tactic_style, attack_direction, defense_style";
+  "id, name, slug, emblem_url, photo_url, country_code, province_code, district_code, home_ground, description, visibility, is_recruiting, recruitment_status, sport_type, founded_date, gender_type, age_groups, uniform_colors, match_days, match_times, monthly_fee, formation_a, formation_b, tactic_style, attack_direction, defense_style";
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -254,6 +318,63 @@ function normalizeRosterMember(row: RawTeamRosterRow): TeamRosterMemberRecord {
   };
 }
 
+function normalizeAnnouncementAuthor(value: RawAnnouncementAuthorRow): string | null {
+  if (Array.isArray(value)) {
+    return value[0]?.display_name ?? null;
+  }
+
+  return value?.display_name ?? null;
+}
+
+function normalizeTeamAnnouncement(row: RawTeamAnnouncementRow): TeamAnnouncement {
+  return {
+    id: row.id,
+    team_id: row.team_id,
+    title: row.title,
+    body: row.body,
+    is_pinned: row.is_pinned,
+    created_at: row.created_at,
+    author_id: row.author_id,
+    author_display_name: normalizeAnnouncementAuthor(row.author),
+  };
+}
+
+function normalizeRecruitmentPost(row: RawRecruitmentPostRow): TeamRecruitmentPost {
+  return {
+    id: row.id,
+    team_id: row.team_id,
+    title: row.title,
+    body: row.body,
+    created_at: row.created_at,
+    created_by: row.created_by,
+  };
+}
+
+function normalizeRecruitmentApplicant(
+  value: RawRecruitmentApplicantProfileRow,
+): { display_name: string | null; avatar_url: string | null } | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+}
+
+function normalizeRecruitmentApplication(row: RawRecruitmentApplicationRow): RecruitmentApplication {
+  const applicant = normalizeRecruitmentApplicant(row.applicant);
+
+  return {
+    id: row.id,
+    post_id: row.post_id,
+    applicant_id: row.applicant_id,
+    applicant_name: applicant?.display_name ?? "Applicant",
+    applicant_avatar_url: applicant?.avatar_url ?? null,
+    message: row.message,
+    status: row.status,
+    created_at: row.created_at,
+  };
+}
+
 async function readFileBlob(uri: string): Promise<Blob> {
   const response = await fetch(uri);
 
@@ -335,6 +456,134 @@ export async function getTeamDetail(teamId: string): Promise<TeamDetailRecord> {
   };
 }
 
+export async function getTeamMembers(teamId: string): Promise<TeamMembersQueryResult> {
+  const userId = await getAuthenticatedUserId();
+  const membersResult = await supabase
+    .from("team_members")
+    .select(
+      "id, user_id, role, status, joined_at, squad_number, profile:profiles!team_members_user_id_fkey(id, display_name, avatar_url, visibility)",
+    )
+    .eq("team_id", teamId)
+    .eq("status", "active")
+    .order("joined_at", { ascending: true });
+
+  if (membersResult.error) {
+    throw new Error(membersResult.error.message);
+  }
+
+  const members = ((membersResult.data ?? []) as RawTeamRosterRow[]).map((row) => normalizeRosterMember(row));
+  const currentRole = members.find((member) => member.user_id === userId)?.role ?? null;
+
+  return {
+    currentRole,
+    members,
+  };
+}
+
+export async function getTeamAnnouncements(teamId: string): Promise<TeamAnnouncement[]> {
+  const result = await supabase
+    .from("team_announcements")
+    .select("id, team_id, title, body, is_pinned, created_at, author_id, author:profiles!team_announcements_author_id_fkey(display_name)")
+    .eq("team_id", teamId)
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return ((result.data ?? []) as RawTeamAnnouncementRow[]).map((row) => normalizeTeamAnnouncement(row));
+}
+
+export async function getTeamAnnouncementDetail(teamId: string, announcementId: string): Promise<TeamAnnouncement> {
+  const result = await supabase
+    .from("team_announcements")
+    .select("id, team_id, title, body, is_pinned, created_at, author_id, author:profiles!team_announcements_author_id_fkey(display_name)")
+    .eq("team_id", teamId)
+    .eq("id", announcementId)
+    .single();
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return normalizeTeamAnnouncement(result.data as RawTeamAnnouncementRow);
+}
+
+export async function createTeamAnnouncement(request: CreateAnnouncementRequest): Promise<TeamAnnouncement> {
+  const response = await invokeFunction<CreateTeamAnnouncementApiResponse>("create-team-announcement", {
+    team_id: request.team_id,
+    title: request.title,
+    body: request.body,
+    is_pinned: request.is_pinned,
+  });
+
+  return assertSuccess(response, "Team announcement creation returned no data.");
+}
+
+export async function toggleAnnouncementPin(request: TogglePinRequest): Promise<TeamAnnouncement> {
+  const response = await invokeFunction<ToggleAnnouncementPinApiResponse>("toggle-announcement-pin", {
+    announcement_id: request.announcement_id,
+  });
+
+  return assertSuccess(response, "Announcement pin toggle returned no data.");
+}
+
+
+export async function updateRecruitmentStatus(
+  teamId: string,
+  recruitmentStatus: ToggleRecruitmentStatusInput["recruitmentStatus"],
+): Promise<TeamRecord> {
+  const response = await invokeFunction<UpdateRecruitmentStatusApiResponse>("update-team-recruitment-status", {
+    team_id: teamId,
+    recruitment_status: recruitmentStatus,
+  });
+
+  return assertSuccess(response, "Recruitment status update returned no data.");
+}
+
+export async function getRecruitmentPosts(teamId: string): Promise<TeamRecruitmentPost[]> {
+  const result = await supabase
+    .from("team_recruitment_posts")
+    .select("id, team_id, title, body, created_at, created_by")
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: false });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return ((result.data ?? []) as RawRecruitmentPostRow[]).map((row) => normalizeRecruitmentPost(row));
+}
+
+export async function getRecruitmentApplications(postId: string): Promise<RecruitmentApplication[]> {
+  const result = await supabase
+    .from("team_recruitment_applications")
+    .select("id, post_id, applicant_id, message, status, created_at, applicant:profiles!team_recruitment_applications_applicant_id_fkey(display_name, avatar_url)")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: false });
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  return ((result.data ?? []) as RawRecruitmentApplicationRow[]).map((row) => normalizeRecruitmentApplication(row));
+}
+
+export async function respondRecruitmentApplication(
+  applicationId: string,
+  decision: RecruitmentDecision,
+): Promise<RecruitmentApplication> {
+  const response = await invokeFunction<RespondRecruitmentApplicationApiResponse>(
+    "respond-team-recruitment-application",
+    {
+      application_id: applicationId,
+      decision,
+    },
+  );
+
+  return assertSuccess(response, "Recruitment application response returned no data.");
+}
 export async function requestTeamAssetUpload(
   input: RequestTeamAssetUploadInput,
 ): Promise<RequestTeamAssetUploadResult> {
@@ -376,6 +625,20 @@ export async function uploadTeamAsset(input: UploadTeamAssetInput): Promise<Requ
   await uploadTeamAssetToSignedUrl(uploadRequest.upload_url, input.contentType, fileBody);
 
   return uploadRequest;
+}
+
+export async function updateTeam(input: UpdateTeamInput): Promise<UpdateTeamResult> {
+  const response = await invokeFunction<UpdateTeamApiResponse>("update-team", {
+    team_id: input.teamId,
+    name: input.name,
+    description: input.description,
+    emblem_url: input.emblemUrl,
+    is_recruiting: input.isRecruiting,
+    province_code: input.provinceCode,
+    district_code: input.districtCode,
+  });
+
+  return assertSuccess(response, "Team update returned no data.");
 }
 
 export async function createTeam(input: CreateTeamInput): Promise<CreateTeamResult> {
@@ -422,6 +685,27 @@ export async function joinTeam(inviteCode: string): Promise<JoinTeamResult> {
   return assertSuccess(response, "Join team returned no data.");
 }
 
+export async function updateTeamMemberRole(input: UpdateTeamMemberRoleInput): Promise<UpdateTeamMemberRoleResult> {
+  const response = await invokeFunction<ApiResponse<UpdateTeamMemberRoleResult>>("update-team-member-role", {
+    team_id: input.teamId,
+    target_user_id: input.targetUserId,
+    role: input.role,
+    squad_number: input.squadNumber,
+  });
+
+  return assertSuccess(response, "Team member role update returned no data.");
+}
+
+export async function kickTeamMember(input: KickTeamMemberInput): Promise<KickTeamMemberResult> {
+  const response = await invokeFunction<KickTeamMemberApiResponse>("kick-team-member", {
+    team_id: input.teamId,
+    target_user_id: input.targetUserId,
+    reason: input.reason,
+  });
+
+  return assertSuccess(response, "Kick team member returned no data.");
+}
+
 export async function searchPublicTeams(keyword?: string): Promise<TeamRecord[]> {
   const normalizedKeyword = keyword?.trim() ?? "";
   let query = supabase
@@ -430,12 +714,17 @@ export async function searchPublicTeams(keyword?: string): Promise<TeamRecord[]>
     .eq("visibility", "public")
     .order("name", { ascending: true })
     .limit(40);
+
   if (normalizedKeyword.length > 0) {
     query = query.ilike("name", `%${normalizedKeyword}%`);
   }
+
   const result = await query;
+
   if (result.error) {
     throw new Error(result.error.message);
   }
+
   return (result.data ?? []) as TeamRecord[];
 }
+

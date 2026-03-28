@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+﻿import { Stack } from "expo-router";
 
 import { APP_HEADER_TITLE_STYLE } from "@/constants/typography";
 
@@ -8,13 +8,15 @@ export default function AuthLayout(): JSX.Element {
       screenOptions={{
         headerShadowVisible: false,
         headerTitleStyle: APP_HEADER_TITLE_STYLE,
-        contentStyle: { backgroundColor: "#f3efe6" },
+        contentStyle: { backgroundColor: "#ffffff" },
       }}
     >
-      <Stack.Screen name="login" options={{ title: "Login" }} />
-      <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
-      <Stack.Screen name="phone-verify" options={{ title: "Phone Verify" }} />
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="email-login" options={{ headerShown: false }} />
+      <Stack.Screen name="email-signup" options={{ headerShown: false }} />
+      <Stack.Screen name="phone-verify" options={{ headerShown: false }} />
       <Stack.Screen name="consent" options={{ title: "Consent" }} />
+      <Stack.Screen name="faq" options={{ headerShown: false }} />
     </Stack>
   );
 }

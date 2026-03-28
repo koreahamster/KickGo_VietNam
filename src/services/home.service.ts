@@ -48,7 +48,7 @@ const FALLBACK_BANNERS: HomeBannerRecord[] = [
     image_url: null,
     fallback_asset: "main",
     type: "event",
-    target_url: "/mercenary-posts",
+    target_url: "/(tabs)/search",
   },
   {
     id: "banner-fallback-3",
